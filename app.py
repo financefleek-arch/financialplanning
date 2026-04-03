@@ -258,7 +258,7 @@ def save_financial_data(client_id, section):
 
     conn     = get_db()
     existing = conn.execute(
-        "SELECT id FROM financial_data WHERE client_id = ? AND section = ?",
+        "SELECT id FROM financial_data_test WHERE client_id = ? AND section = ?",
         (client_id, section)
     ).fetchone()
 
