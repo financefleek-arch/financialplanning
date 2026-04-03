@@ -197,9 +197,9 @@ def delete_client(client_id):
     if auth: return auth
 
     conn = get_db()
-    conn.execute("DELETE FROM clients WHERE id = ?", (client_id,))
+    conn.execute("DELETE FROM clients_test WHERE id = ?", (client_id,))
     conn.execute("DELETE FROM financial_data_test WHERE client_id = ?", (client_id,))
-    conn.execute("DELETE FROM financial_data_test WHERE client_id = ?", (client_id,))
+    conn.execute("DELETE FROM financial_plans_test WHERE client_id = ?", (client_id,))
     conn.commit()
     conn.close()
     return jsonify({"status": "success"})
@@ -295,7 +295,7 @@ def get_plan(client_id):
 
     conn = get_db()
     plan = conn.execute(
-        "SELECT * FROM financial_data_test WHERE client_id = ? ORDER BY created_at DESC LIMIT 1",
+        "SELECT * FROM financial_plans_test WHERE client_id = ? ORDER BY created_at DESC LIMIT 1",
         (client_id,)
     ).fetchone()
     conn.close()
@@ -331,7 +331,7 @@ You are an expert SEBI registered financial planner in India.
 Create a comprehensive financial plan for {client["name"]}.
 
 CLIENT FINANCIAL DATA:
-{json.dumps(financial_data_test, indent=2)}
+{json.dumps(financial_data, indent=2)}
 
 Create a detailed financial plan with these sections:
 
