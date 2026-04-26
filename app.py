@@ -36,13 +36,9 @@ if not ADVISOR_USER or not ADVISOR_PASS:
 sessions = {}  # {token: {username, role, expires}}
 
 
-# ---- DATABASE SETUP ----
 def get_db():
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10)
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    # WAL mode allows concurrent reads without blocking writes
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=5000")
     return conn
 
 
@@ -133,17 +129,8 @@ def get_session():
             conn.commit()
             return None
         return dict(session)
-    except sqlite3.OperationalError:
-        # Table missing — re-initialise DB (can happen with multiple gunicorn workers)
-        conn.close()
-        init_db()
-        return None
     finally:
-        try:
-            conn.close()
-        except Exception:
-            pass
-
+        conn.close()
 
 def require_auth(role=None):
     session = get_session()
