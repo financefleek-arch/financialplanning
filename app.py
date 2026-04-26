@@ -38,8 +38,11 @@ sessions = {}  # {token: {username, role, expires}}
 
 # ---- DATABASE SETUP ----
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10)
     conn.row_factory = sqlite3.Row
+    # WAL mode allows concurrent reads without blocking writes
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
     return conn
 
 
@@ -103,13 +106,23 @@ def create_session(username, role):
 
 def get_session():
     token = request.headers.get("X-Auth-Token")
-    if not token or token not in sessions:
+    if not token:
         return None
-    session = sessions[token]
-    if datetime.now() > session["expires"]:
-        del sessions[token]
-        return None
-    return session
+    conn = get_db()
+    try:
+        session = conn.execute(
+            "SELECT * FROM sessions WHERE token = ?", (token,)
+        ).fetchone()
+        if not session:
+            return None
+        if datetime.now() > datetime.strptime(session["expires"], "%Y-%m-%d %H:%M:%S"):
+            # Clean up expired session in same connection
+            conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
+            conn.commit()
+            return None
+        return dict(session)
+    finally:
+        conn.close()
 
 
 def require_auth(role=None):
