@@ -116,13 +116,20 @@ def get_session():
         if not session:
             return None
         if datetime.now() > datetime.strptime(session["expires"], "%Y-%m-%d %H:%M:%S"):
-            # Clean up expired session in same connection
             conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
             conn.commit()
             return None
         return dict(session)
-    finally:
+    except sqlite3.OperationalError:
+        # Table missing — re-initialise DB (can happen with multiple gunicorn workers)
         conn.close()
+        init_db()
+        return None
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 
 def require_auth(role=None):
