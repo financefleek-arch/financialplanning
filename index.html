@@ -428,9 +428,21 @@ function toast(msg, type='info') {
 async function api(path, opts={}) {
   const headers = { 'Content-Type': 'application/json' };
   if (auth.token) headers['X-Auth-Token'] = auth.token;
-  const res = await fetch(API + path, { headers, ...opts, body: opts.body ? JSON.stringify(opts.body) : undefined });
-  if (res.status === 401) { doLogout(); return null; }
-  return res.json();
+  try {
+    const res = await fetch(API + path, { headers, ...opts, body: opts.body ? JSON.stringify(opts.body) : undefined });
+    const data = await res.json();
+    if (res.status === 401 && path !== '/api/logout' && path !== '/api/login') {
+      // Session expired — clear local state without calling api() again
+      auth = {};
+      localStorage.removeItem('fleek_auth');
+      showScreen('login-screen');
+      return null;
+    }
+    return data;
+  } catch (e) {
+    console.error('API error on', path, e);
+    return null;
+  }
 }
 
 function showScreen(id) {
@@ -470,7 +482,12 @@ document.getElementById('login-pass').addEventListener('keydown', e => { if(e.ke
 document.getElementById('login-user').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
 async function doLogout() {
-  await api('/api/logout', { method: 'POST' });
+  // Fire-and-forget logout call — don't await, don't let it trigger another redirect
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (auth.token) headers['X-Auth-Token'] = auth.token;
+    fetch(API + '/api/logout', { method: 'POST', headers });
+  } catch(e) {}
   auth = {}; localStorage.removeItem('fleek_auth');
   showScreen('login-screen');
   document.getElementById('login-user').value = '';
