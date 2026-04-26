@@ -30,7 +30,10 @@ if not ANTHROPIC_KEY:
 if not ADVISOR_USER or not ADVISOR_PASS:
     raise RuntimeError("ADVISOR_USER and ADVISOR_PASS environment variables must be set")
 
+# Sessions are stored in SQLite — survives restarts and works across workers.
 
+
+# ---- DATABASE SETUP ----
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -38,17 +41,18 @@ def get_db():
 
 
 def init_db():
+    print(f"✅ Initialising DB at: {DB_PATH}")
     conn = get_db()
     c    = conn.cursor()
 
     c.execute("""
-    CREATE TABLE IF NOT EXISTS sessions (
-        token      TEXT PRIMARY KEY,
-        username   TEXT NOT NULL,
-        role       TEXT NOT NULL,
-        expires    TEXT NOT NULL
-    )
-""")
+        CREATE TABLE IF NOT EXISTS sessions (
+            token      TEXT PRIMARY KEY,
+            username   TEXT NOT NULL,
+            role       TEXT NOT NULL,
+            expires    TEXT NOT NULL
+        )
+    """)
 
     c.execute("""
         CREATE TABLE IF NOT EXISTS clients_test (
@@ -133,8 +137,17 @@ def get_session():
             conn.commit()
             return None
         return dict(session)
-    finally:
+    except sqlite3.OperationalError:
+        # Table missing — re-initialise DB (can happen with multiple gunicorn workers)
         conn.close()
+        init_db()
+        return None
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
 
 def require_auth(role=None):
     session = get_session()
@@ -193,6 +206,7 @@ def logout():
         conn.commit()
         conn.close()
     return jsonify({"status": "success"})
+
 
 # ---- CLIENT MANAGEMENT (Advisor only) ----
 @app.route("/api/clients", methods=["GET"])
@@ -260,7 +274,9 @@ SECTIONS = [
     "insurance",
     "investments",
     "goals",
-    "risk_profile"
+    "risk_profile",
+    "tax_profile",      # NEW: per-person tax details for family planning
+    "family_profile",   # NEW: family mode toggle + spouse names
 ]
 
 
@@ -376,12 +392,48 @@ def generate_plan(client_id):
 
     financial_data = {row["section"]: json.loads(row["data"]) for row in rows}
 
+    # Detect family mode
+    family = financial_data.get("family_profile", {})
+    is_family = family.get("family_mode") == "yes"
+    spouse1   = family.get("spouse1_name", "Spouse 1")
+    spouse2   = family.get("spouse2_name", "Spouse 2")
+
+    # Build the prompt — family-aware
+    if is_family:
+        plan_type_intro = f"""This is a FAMILY financial plan for {client["name"]} — a dual income household.
+Spouse 1: {spouse1}
+Spouse 2: {spouse2}
+
+For tax, insurance, and investment sections, provide analysis for EACH person separately where applicable, then a combined recommendation."""
+        extra_sections = """
+9. TAX PLANNING — INDIVIDUAL
+   - {spouse1}: regime choice (old vs new), 80C utilisation, HRA, NPS, other deductions, estimated tax & savings
+   - {spouse2}: same breakdown
+   - Combined household tax saving opportunities
+
+10. ACTION PLAN
+   - Immediate actions (this month)
+   - Short term (3-6 months)
+   - Long term (1 year+)""".format(spouse1=spouse1, spouse2=spouse2)
+    else:
+        plan_type_intro = f"This is an individual financial plan for {client['name']}."
+        extra_sections = """
+9. TAX PLANNING
+   - 80C optimization
+   - Other deductions applicable
+   - Estimated tax savings
+
+10. ACTION PLAN
+   - Immediate actions (this month)
+   - Short term (3-6 months)
+   - Long term (1 year+)"""
+
     # Generate plan with Claude
     try:
         ai_client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
         prompt    = f"""
 You are an expert SEBI registered financial planner in India.
-Create a comprehensive financial plan for {client["name"]}.
+{plan_type_intro}
 
 CLIENT FINANCIAL DATA:
 {json.dumps(financial_data, indent=2)}
@@ -393,18 +445,18 @@ Create a detailed financial plan with these sections:
    - Key strengths and concerns
 
 2. INCOME & EXPENSE ANALYSIS
-   - Monthly surplus/deficit
+   - Combined monthly surplus/deficit
    - Savings rate assessment
    - Expense optimization suggestions
 
 3. EMERGENCY FUND
    - Current status
-   - Recommended amount
+   - Recommended amount (3-6 months of combined expenses)
    - How to build it
 
 4. INSURANCE RECOMMENDATIONS
-   - Life insurance (term plan) — cover amount & premium estimate
-   - Health insurance — cover amount
+   - Term insurance: cover amount & premium estimate per person
+   - Health insurance: family floater vs individual cover recommendation
    - Critical illness / accidental cover if needed
    - Gap analysis vs existing coverage
 
@@ -420,16 +472,12 @@ Create a detailed financial plan with these sections:
 
 7. GOALS PLANNING
    - For each goal: required corpus, monthly investment needed, recommended instruments
+   - Note joint vs individual goal ownership
 
-8. TAX PLANNING
-   - 80C optimization
-   - Other deductions applicable
-   - Estimated tax savings
-
-9. ACTION PLAN
-   - Immediate actions (this month)
-   - Short term (3-6 months)
-   - Long term (1 year+)
+8. NET WORTH SUMMARY
+   - Total assets, liabilities, net worth
+   - Year-on-year growth target
+{extra_sections}
 
 Use ₹ for all amounts. Be specific with numbers.
 """
@@ -465,6 +513,50 @@ Use ₹ for all amounts. Be specific with numbers.
     conn.commit()
     conn.close()
     return jsonify({"status": "success", "plan": plan_text, "updated_at": now})
+
+
+# ---- PLAN UPLOAD ----
+@app.route("/api/clients/<client_id>/plan/upload", methods=["POST"])
+def upload_plan(client_id):
+    auth = require_auth("advisor")
+    if auth: return auth
+
+    data      = request.json
+    plan_text = data.get("plan", "").strip()
+    source    = data.get("source", "uploaded")  # "uploaded" or "ai_generated"
+
+    if not plan_text:
+        return jsonify({"error": "Plan content is required"}), 400
+
+    now  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_db()
+
+    # Verify client exists
+    client = conn.execute(
+        "SELECT id FROM clients_test WHERE id = ?", (client_id,)
+    ).fetchone()
+    if not client:
+        conn.close()
+        return jsonify({"error": "Client not found"}), 404
+
+    existing = conn.execute(
+        "SELECT id FROM financial_plans_test WHERE client_id = ?", (client_id,)
+    ).fetchone()
+
+    if existing:
+        conn.execute(
+            "UPDATE financial_plans_test SET plan = ?, updated_at = ? WHERE client_id = ?",
+            (plan_text, now, client_id)
+        )
+    else:
+        conn.execute(
+            "INSERT INTO financial_plans_test (id, client_id, plan, created_at, updated_at) VALUES (?,?,?,?,?)",
+            (str(uuid.uuid4()), client_id, plan_text, now, now)
+        )
+
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "success", "plan": plan_text, "updated_at": now, "source": source})
 
 
 # ---- STATIC FRONTEND ----
