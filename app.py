@@ -30,11 +30,6 @@ if not ANTHROPIC_KEY:
 if not ADVISOR_USER or not ADVISOR_PASS:
     raise RuntimeError("ADVISOR_USER and ADVISOR_PASS environment variables must be set")
 
-# In-memory session store
-# NOTE: This will not persist across Gunicorn workers or restarts.
-# For production with multiple workers, replace with Redis or a DB-backed store.
-sessions = {}  # {token: {username, role, expires}}
-
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -45,6 +40,15 @@ def get_db():
 def init_db():
     conn = get_db()
     c    = conn.cursor()
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS sessions (
+        token      TEXT PRIMARY KEY,
+        username   TEXT NOT NULL,
+        role       TEXT NOT NULL,
+        expires    TEXT NOT NULL
+    )
+""")
 
     c.execute("""
         CREATE TABLE IF NOT EXISTS clients_test (
@@ -183,10 +187,12 @@ def login():
 @app.route("/api/logout", methods=["POST"])
 def logout():
     token = request.headers.get("X-Auth-Token")
-    if token in sessions:
-        del sessions[token]
+    if token:
+        conn = get_db()
+        conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
+        conn.commit()
+        conn.close()
     return jsonify({"status": "success"})
-
 
 # ---- CLIENT MANAGEMENT (Advisor only) ----
 @app.route("/api/clients", methods=["GET"])
