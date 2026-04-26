@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 import anthropic
@@ -9,17 +9,32 @@ import uuid
 from datetime import datetime, timedelta
 import secrets
 
-app  = Flask(__name__)
+app = Flask(__name__)
 CORS(app)
 
+@app.after_request
+def allow_iframe(response):
+    response.headers.pop("X-Frame-Options", None)
+    response.headers["Content-Security-Policy"] = "frame-ancestors 'self' https://fleekfinance.in"
+    return response
+
 # ---- CONFIG ----
-ANTHROPIC_KEY  = os.environ.get("ANTHROPIC_KEY")
-ADVISOR_USER   = os.environ.get("ADVISOR_USER",     "advisor")
-ADVISOR_PASS   = os.environ.get("ADVISOR_PASS",     "Advisor@2026!")
-DB_PATH        = os.environ.get("DB_PATH",          "financial_planner.db")
+ANTHROPIC_KEY = os.environ.get("ANTHROPIC_KEY")
+ADVISOR_USER  = os.environ.get("ADVISOR_USER")
+ADVISOR_PASS  = os.environ.get("ADVISOR_PASS")
+DB_PATH       = os.environ.get("DB_PATH", "financial_planner.db")
+
+# Fail fast if required env vars are missing
+if not ANTHROPIC_KEY:
+    raise RuntimeError("ANTHROPIC_KEY environment variable is not set")
+if not ADVISOR_USER or not ADVISOR_PASS:
+    raise RuntimeError("ADVISOR_USER and ADVISOR_PASS environment variables must be set")
 
 # In-memory session store
+# NOTE: This will not persist across Gunicorn workers or restarts.
+# For production with multiple workers, replace with Redis or a DB-backed store.
 sessions = {}  # {token: {username, role, expires}}
+
 
 # ---- DATABASE SETUP ----
 def get_db():
@@ -27,11 +42,11 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def init_db():
     conn = get_db()
     c    = conn.cursor()
 
-    # clients_test table
     c.execute("""
         CREATE TABLE IF NOT EXISTS clients_test (
             id            TEXT PRIMARY KEY,
@@ -44,7 +59,6 @@ def init_db():
         )
     """)
 
-    # Financial data table
     c.execute("""
         CREATE TABLE IF NOT EXISTS financial_data_test (
             id         TEXT PRIMARY KEY,
@@ -56,7 +70,6 @@ def init_db():
         )
     """)
 
-    # Financial plan table
     c.execute("""
         CREATE TABLE IF NOT EXISTS financial_plans_test (
             id         TEXT PRIMARY KEY,
@@ -72,7 +85,9 @@ def init_db():
     conn.close()
     print("✅ Database initialized")
 
+
 init_db()
+
 
 # ---- AUTH HELPERS ----
 def create_session(username, role):
@@ -85,6 +100,7 @@ def create_session(username, role):
     }
     return token
 
+
 def get_session():
     token = request.headers.get("X-Auth-Token")
     if not token or token not in sessions:
@@ -95,6 +111,7 @@ def get_session():
         return None
     return session
 
+
 def require_auth(role=None):
     session = get_session()
     if not session:
@@ -102,6 +119,7 @@ def require_auth(role=None):
     if role and session["role"] != role and session["role"] != "advisor":
         return jsonify({"error": "Insufficient permissions"}), 403
     return None
+
 
 # ---- AUTH ROUTES ----
 @app.route("/api/login", methods=["POST"])
@@ -131,15 +149,16 @@ def login():
     if client and check_password_hash(client["password_hash"], password):
         token = create_session(client["email"], "client")
         return jsonify({
-            "status"  : "success",
-            "token"   : token,
-            "role"    : "client",
-            "name"    : client["name"],
-            "username": client["email"],
+            "status"   : "success",
+            "token"    : token,
+            "role"     : "client",
+            "name"     : client["name"],
+            "username" : client["email"],
             "client_id": client["id"]
         })
 
     return jsonify({"error": "Invalid username or password"}), 401
+
 
 @app.route("/api/logout", methods=["POST"])
 def logout():
@@ -147,6 +166,7 @@ def logout():
     if token in sessions:
         del sessions[token]
     return jsonify({"status": "success"})
+
 
 # ---- CLIENT MANAGEMENT (Advisor only) ----
 @app.route("/api/clients", methods=["GET"])
@@ -161,6 +181,7 @@ def get_clients():
     conn.close()
 
     return jsonify([dict(c) for c in clients])
+
 
 @app.route("/api/clients", methods=["POST"])
 def add_client():
@@ -191,6 +212,7 @@ def add_client():
     except sqlite3.IntegrityError:
         return jsonify({"error": "Email already exists"}), 400
 
+
 @app.route("/api/clients/<client_id>", methods=["DELETE"])
 def delete_client(client_id):
     auth = require_auth("advisor")
@@ -204,6 +226,7 @@ def delete_client(client_id):
     conn.close()
     return jsonify({"status": "success"})
 
+
 # ---- FINANCIAL DATA ----
 SECTIONS = [
     "income_expenses",
@@ -214,23 +237,24 @@ SECTIONS = [
     "risk_profile"
 ]
 
+
 @app.route("/api/clients/<client_id>/data", methods=["GET"])
 def get_financial_data(client_id):
     auth = require_auth()
     if auth: return auth
 
+    conn = get_db()
+
     # Clients can only view their own data
     session = get_session()
     if session["role"] == "client":
-        conn   = get_db()
-        client = conn.execute(
+        client_row = conn.execute(
             "SELECT id FROM clients_test WHERE email = ?", (session["username"],)
         ).fetchone()
-        conn.close()
-        if not client or client["id"] != client_id:
+        if not client_row or client_row["id"] != client_id:
+            conn.close()
             return jsonify({"error": "Access denied"}), 403
 
-    conn   = get_db()
     rows   = conn.execute(
         "SELECT section, data FROM financial_data_test WHERE client_id = ?", (client_id,)
     ).fetchall()
@@ -244,6 +268,7 @@ def get_financial_data(client_id):
         result[row["section"]] = json.loads(row["data"])
 
     return jsonify(result)
+
 
 @app.route("/api/clients/<client_id>/data/<section>", methods=["POST"])
 def save_financial_data(client_id, section):
@@ -277,23 +302,24 @@ def save_financial_data(client_id, section):
     conn.close()
     return jsonify({"status": "success", "message": f"{section} saved!"})
 
+
 # ---- FINANCIAL PLAN ----
 @app.route("/api/clients/<client_id>/plan", methods=["GET"])
 def get_plan(client_id):
     auth = require_auth()
     if auth: return auth
 
+    conn = get_db()
+
     session = get_session()
     if session["role"] == "client":
-        conn   = get_db()
-        client = conn.execute(
+        client_row = conn.execute(
             "SELECT id FROM clients_test WHERE email = ?", (session["username"],)
         ).fetchone()
-        conn.close()
-        if not client or client["id"] != client_id:
+        if not client_row or client_row["id"] != client_id:
+            conn.close()
             return jsonify({"error": "Access denied"}), 403
 
-    conn = get_db()
     plan = conn.execute(
         "SELECT * FROM financial_plans_test WHERE client_id = ? ORDER BY created_at DESC LIMIT 1",
         (client_id,)
@@ -304,14 +330,14 @@ def get_plan(client_id):
         return jsonify({"plan": plan["plan"], "updated_at": plan["updated_at"]})
     return jsonify({"plan": None})
 
+
 @app.route("/api/clients/<client_id>/plan/generate", methods=["POST"])
 def generate_plan(client_id):
     auth = require_auth("advisor")
     if auth: return auth
 
-    # Fetch all financial data
-    conn = get_db()
-    rows = conn.execute(
+    conn   = get_db()
+    rows   = conn.execute(
         "SELECT section, data FROM financial_data_test WHERE client_id = ?", (client_id,)
     ).fetchall()
     client = conn.execute(
@@ -325,8 +351,9 @@ def generate_plan(client_id):
     financial_data = {row["section"]: json.loads(row["data"]) for row in rows}
 
     # Generate plan with Claude
-    ai_client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
-    prompt    = f"""
+    try:
+        ai_client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
+        prompt    = f"""
 You are an expert SEBI registered financial planner in India.
 Create a comprehensive financial plan for {client["name"]}.
 
@@ -381,29 +408,31 @@ Create a detailed financial plan with these sections:
 Use ₹ for all amounts. Be specific with numbers.
 """
 
-    response = ai_client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=3000,
-        messages=[{"role": "user", "content": prompt}]
-    )
+        response = ai_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=3000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+    except anthropic.APIError as e:
+        return jsonify({"error": f"AI generation failed: {str(e)}"}), 500
 
     plan_text = response.content[0].text
     now       = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Save plan
+    # FIX: Save to financial_plans_test (not financial_data_test)
     conn     = get_db()
     existing = conn.execute(
-        "SELECT id FROM financial_data_test WHERE client_id = ?", (client_id,)
+        "SELECT id FROM financial_plans_test WHERE client_id = ?", (client_id,)
     ).fetchone()
 
     if existing:
         conn.execute(
-            "UPDATE financial_data_test SET plan = ?, updated_at = ? WHERE client_id = ?",
+            "UPDATE financial_plans_test SET plan = ?, updated_at = ? WHERE client_id = ?",
             (plan_text, now, client_id)
         )
     else:
         conn.execute(
-            "INSERT INTO financial_data_test (id, client_id, plan, created_at, updated_at) VALUES (?,?,?,?,?)",
+            "INSERT INTO financial_plans_test (id, client_id, plan, created_at, updated_at) VALUES (?,?,?,?,?)",
             (str(uuid.uuid4()), client_id, plan_text, now, now)
         )
 
@@ -411,15 +440,14 @@ Use ₹ for all amounts. Be specific with numbers.
     conn.close()
     return jsonify({"status": "success", "plan": plan_text, "updated_at": now})
 
-@app.route("/api/debug")
-def debug():
-    return jsonify({
-        "status"       : "running",
-        "advisor_user" : ADVISOR_USER,
-        "db_path"      : DB_PATH,
-        "timestamp"    : datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    })
+
+# ---- STATIC FRONTEND ----
+@app.route("/")
+def serve_index():
+    return send_from_directory(".", "index.html")
+
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    port  = int(os.environ.get("PORT", 8080))
+    debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=port, debug=debug)
