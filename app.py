@@ -95,12 +95,25 @@ init_db()
 # ---- AUTH HELPERS ----
 def create_session(username, role):
     token   = secrets.token_hex(32)
-    expires = datetime.now() + timedelta(hours=8)
-    sessions[token] = {
-        "username": username,
-        "role"    : role,
-        "expires" : expires
-    }
+    expires = (datetime.now() + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO sessions (token, username, role, expires) VALUES (?,?,?,?)",
+            (token, username, role, expires)
+        )
+        conn.commit()
+        conn.close()
+    except sqlite3.OperationalError:
+        # Sessions table missing — re-initialise and retry once
+        init_db()
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO sessions (token, username, role, expires) VALUES (?,?,?,?)",
+            (token, username, role, expires)
+        )
+        conn.commit()
+        conn.close()
     return token
 
 
