@@ -1167,13 +1167,39 @@ function renderAdvisorPlan(el) {
         <span style="font-size:13px;font-weight:500">PDF plan uploaded</span>
         <span class="badge badge-green" style="margin-left:auto">Active</span>
       </div>
-      <iframe src="${plan.pdf_data}" style="width:100%;height:700px;border:none;border-radius:8px"></iframe>` :
+      <div id="adv-pdf-container" style="width:100%;min-height:600px;border:1px solid var(--gray-200);border-radius:8px;overflow:hidden;background:#525659">
+        <div style="text-align:center;padding:40px;color:#ccc;font-size:13px">Loading PDF…</div>
+      </div>` :
       `<div class="plan-output">${formatPlan(plan.plan)}</div>`
     }
   </div>`;
+
+  // Render PDF via blob URL after innerHTML is set
+  if (plan?.pdf_data) {
+    setTimeout(() => renderPdfBlob(plan.pdf_data, 'adv-pdf-container'), 50);
+  }
 }
 
-async function handlePdfUpload(event) {
+function renderPdfBlob(pdfData, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  try {
+    const base64 = pdfData.includes(',') ? pdfData.split(',')[1] : pdfData;
+    const binary  = atob(base64);
+    const bytes   = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const url  = URL.createObjectURL(blob);
+    container.innerHTML = `<iframe src="${url}#toolbar=1" style="width:100%;height:800px;border:none" allowfullscreen></iframe>`;
+  } catch(e) {
+    container.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">
+      PDF preview unavailable in this browser.<br>
+      <a href="${pdfData}" download="financial-plan.pdf" style="color:var(--accent);font-weight:500;margin-top:8px;display:inline-block">Download PDF to view</a>
+    </div>`;
+  }
+}
+
+function handlePdfUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
   if (file.type !== 'application/pdf') { toast('Please upload a PDF file','error'); return; }
@@ -1182,7 +1208,7 @@ async function handlePdfUpload(event) {
   toast('Uploading PDF…','info');
   const reader = new FileReader();
   reader.onload = async (e) => {
-    const base64 = e.target.result; // data:application/pdf;base64,...
+    const base64 = e.target.result;
     const res = await api(`/api/families/${currentFamilyId}/plan/upload`, {
       method: 'POST',
       body: { pdf_data: base64, filename: file.name }
@@ -1194,7 +1220,7 @@ async function handlePdfUpload(event) {
     } else toast(res?.error||'Upload failed','error');
   };
   reader.readAsDataURL(file);
-  event.target.value = ''; // reset input
+  event.target.value = '';
 }
 
 function renderDataTable(section, d) {
@@ -1853,10 +1879,17 @@ function renderClientPlan() {
       </a>` : ''}
     </div>
     ${plan.pdf_data
-      ? `<iframe src="${plan.pdf_data}" style="width:100%;height:700px;border:none;border-radius:8px"></iframe>`
+      ? `<div id="pdf-render-container" style="width:100%;min-height:600px;border:1px solid var(--gray-200);border-radius:8px;overflow:hidden;background:#525659">
+           <div style="text-align:center;padding:40px;color:#ccc;font-size:13px">Loading PDF…</div>
+         </div>`
       : `<div class="plan-output">${formatPlan(plan.plan)}</div>`
     }
   </div>`;
+
+  // Render PDF via shared blob helper
+  if (plan.pdf_data) {
+    setTimeout(() => renderPdfBlob(plan.pdf_data, 'pdf-render-container'), 50);
+  }
 }
 
 // ================================================================
@@ -1884,7 +1917,7 @@ async function renderAdvisorMF(el, members) {
   results.forEach(({ member, data }) => {
     if (!data) return;
     data.schemes.forEach(s => {
-      if ((s.current_value || 0) > 0 || (s.units || 0) > 0)
+      if (parseFloat(s.current_value) > 0 || parseFloat(s.units) > 0)
         combinedSchemes.push({ ...s, member_name: member.name });
     });
     totalValue += data.summary.total_value || 0;
@@ -2102,7 +2135,7 @@ async function loadClientMF() {
     totalValue += data.summary.total_value || 0;
     totalCost  += data.summary.total_cost  || 0;
     totalSip   += data.summary.total_sip   || 0;
-    data.schemes.forEach(s => { if ((s.current_value || 0) > 0 || (s.units || 0) > 0) allSchemes.push({...s, member_name: member.name}); });
+    data.schemes.forEach(s => { if (parseFloat(s.current_value) > 0 || parseFloat(s.units) > 0) allSchemes.push({...s, member_name: member.name}); });
   });
 
   el.innerHTML = `
@@ -2148,8 +2181,8 @@ function switchMFMember(memberId, el) {
 }
 
 function renderSchemesTable(schemes, fmtXirr, xirrColor, gainColor) {
-  // Filter out zero-balance schemes
-  schemes = schemes.filter(s => (s.current_value || 0) > 0 || (s.units || 0) > 0);
+  // Filter out zero-balance schemes — use parseFloat to handle string values from JSON
+  schemes = schemes.filter(s => parseFloat(s.current_value) > 0 || parseFloat(s.units) > 0);
   if (!schemes.length) return '<div class="empty" style="padding:30px"><p>No holdings data</p></div>';
 
   // Group by AMC
