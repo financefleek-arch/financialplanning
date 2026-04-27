@@ -718,11 +718,27 @@ async function doLogin() {
 
 async function doLogout() {
   await api('/api/logout', {method:'POST'});
-  auth = {}; localStorage.removeItem('fleek_auth');
+  auth = {};
+  // Clear all state
+  allFamilies = [];
+  currentFamilyId = null;
+  currentFamilyData = {};
+  if (nwChart) { nwChart.destroy(); nwChart = null; }
+  if (cfChart) { cfChart.destroy(); cfChart = null; }
+  localStorage.removeItem('fleek_auth');
   showScreen('login-screen');
 }
 
+function clearAppState() {
+  allFamilies = [];
+  currentFamilyId = null;
+  currentFamilyData = {};
+  if (nwChart) { nwChart.destroy(); nwChart = null; }
+  if (cfChart) { cfChart.destroy(); cfChart = null; }
+}
+
 function initApp() {
+  clearAppState();
   document.getElementById('sb-user').textContent = auth.name;
   if (auth.role === 'advisor') {
     document.getElementById('sb-role').textContent = 'Advisor';
