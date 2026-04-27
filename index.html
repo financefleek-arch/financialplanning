@@ -847,7 +847,7 @@ async function openFamilyDetail(familyId) {
       ${m.name}
     </span>`).join('');
 
-  currentFamilyData = {...(data||{}), _family: family, _plan: plan?.plan ? plan : null};
+  currentFamilyData = {...(data||{}), _family: family, _plan: (plan?.plan || plan?.pdf_data) ? plan : null};
   switchFamilyTab('overview');
 }
 
@@ -1317,7 +1317,7 @@ async function loadClientView() {
     api(`/api/families/${auth.familyId}/plan`)
   ]);
   if (!data) return;
-  currentFamilyData = {...(data||{}), _plan: plan?.plan ? plan : null};
+  currentFamilyData = {...(data||{}), _plan: (plan?.plan || plan?.pdf_data) ? plan : null};
   renderClientOverview();
   renderClientNetWorth();
   renderClientCashFlow();
