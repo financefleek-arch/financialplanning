@@ -235,14 +235,15 @@ input,select,textarea{font-family:inherit;outline:none}
 .sidebar-overlay.open{display:block}
 
 /* ── BOTTOM NAV ── */
-.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--navy);
-  z-index:90;padding:8px 0 max(8px,env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.08)}
+.bottom-nav{display:none;position:fixed;top:0;left:0;right:0;background:var(--navy);
+  z-index:90;padding:0;border-bottom:1px solid rgba(255,255,255,.08)}
 .bottom-nav-items{display:flex;justify-content:space-around}
-.bnav-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 8px;
-  border-radius:8px;color:rgba(255,255,255,.45);font-size:10px;font-weight:500;
-  cursor:pointer;background:transparent;border:none;min-width:56px}
+.bnav-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 6px;
+  border-radius:0;color:rgba(255,255,255,.45);font-size:10px;font-weight:500;
+  cursor:pointer;background:transparent;border:none;min-width:56px;flex:1;
+  border-bottom:2px solid transparent;transition:all .15s}
 .bnav-item svg{opacity:.6}
-.bnav-item.active{color:var(--accent)} .bnav-item.active svg{opacity:1}
+.bnav-item.active{color:var(--accent);border-bottom:2px solid var(--accent)} .bnav-item.active svg{opacity:1}
 
 /* ── SPINNER ── */
 .spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--white);border-radius:50%;animation:spin .7s linear infinite}
@@ -253,7 +254,8 @@ input,select,textarea{font-family:inherit;outline:none}
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
   .main{margin-left:0}
-  .content{padding:14px;padding-bottom:80px}
+  .content{padding:14px;padding-top:70px;padding-bottom:16px}
+  .bottom-nav.show ~ .main .topbar, .bottom-nav.show + * .topbar { display: none; }
   .hamburger{display:flex}
   .sidebar{transform:translateX(-100%)}
   .sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.3)}
@@ -267,7 +269,6 @@ input,select,textarea{font-family:inherit;outline:none}
   .tab{flex-shrink:0}
   .bottom-nav.show{display:block}
   #client-nav{display:none!important}
-  .sidebar-footer{display:none}
   .form-group input,.form-group select,.form-group textarea{font-size:16px;min-height:44px}
   .btn-primary{min-height:48px;font-size:15px}
   .card{overflow-x:auto}
@@ -492,6 +493,10 @@ input,select,textarea{font-family:inherit;outline:none}
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         My Plan
       </button>
+      <button class="bnav-item" onclick="doLogout()" style="color:rgba(239,68,68,.7)">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sign out
+      </button>
     </div>
   </nav>
 </div><!-- /app-screen -->
@@ -665,6 +670,10 @@ function initApp() {
     document.getElementById('advisor-nav').style.display = 'none';
     document.getElementById('client-nav').style.display = '';
     document.getElementById('bottom-nav').classList.add('show');
+    // Hide topbar on mobile for clients — top nav replaces it
+    if (window.innerWidth <= 768) {
+      document.querySelector('.topbar').style.display = 'none';
+    }
     showScreen('app-screen'); showPage('cl-overview');
     loadClientView();
   }
