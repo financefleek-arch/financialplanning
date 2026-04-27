@@ -962,41 +962,48 @@ def upload_cas(family_id, member_id):
         print(f"[FOLIO] AMC={amc} | schemes={len(folio.get('schemes') or [])} | folio={folio.get('folio','')}")
         for scheme in (folio.get("schemes") or []):
             print(f"[SCHEME] {scheme.get('scheme','')[:40]} | close={scheme.get('close')} | valuation={scheme.get('valuation')}")
-            valuation    = scheme.get("valuation") or {}
-            transactions = scheme.get("transactions") or []
-            current_val  = float(valuation.get("value") or 0)
-            cost_val     = float(valuation.get("cost") or 0)
-            val_date     = str(valuation.get("date") or "")
-            units        = float(scheme.get("close") or 0)
+            try:
+                valuation    = scheme.get("valuation") or {}
+                transactions = scheme.get("transactions") or []
+                current_val  = float(valuation.get("value") or 0)
+                cost_val     = float(valuation.get("cost") or 0)
+                val_date     = str(valuation.get("date") or "")
+                units        = float(scheme.get("close") or 0)
 
-            scheme_xirr  = compute_scheme_xirr(transactions, current_val, val_date) if current_val else None
-            sip_amount   = detect_sip_amount(transactions)
+                try:
+                    scheme_xirr = compute_scheme_xirr(transactions, current_val, val_date) if current_val else None
+                except Exception as e:
+                    print(f"[XIRR ERROR] {scheme.get('scheme','')[:40]} | {str(e)}")
+                    scheme_xirr = None
+                sip_amount   = detect_sip_amount(transactions)
 
-            # Temp debug — log full structure of first transaction
-            if transactions:
-                print(f"[SIP] {scheme.get('scheme','')[:35]} → sip={sip_amount}")
-                print(f"[SIP_KEYS] {dict(transactions[0])}")
+                # Temp debug
+                if transactions:
+                    print(f"[SIP] {scheme.get('scheme','')[:35]} → sip={sip_amount}")
+                    print(f"[SIP_KEYS] {dict(transactions[0])}")
 
-            gain     = (current_val - cost_val) if current_val and cost_val else None
-            gain_pct = round((gain / cost_val * 100), 2) if gain and cost_val else None
+                gain     = (current_val - cost_val) if current_val and cost_val else None
+                gain_pct = round((gain / cost_val * 100), 2) if gain and cost_val else None
 
-            schemes.append({
-                "amc"          : amc,
-                "scheme"       : scheme.get("scheme", ""),
-                "isin"         : scheme.get("isin", ""),
-                "folio"        : folio.get("folio", ""),
-                "units"        : round(float(units), 4),
-                "nav"          : valuation.get("nav", 0),
-                "current_value": round(float(current_val), 2),
-                "cost"         : round(float(cost_val), 2),
-                "gain"         : round(float(gain), 2) if gain is not None else None,
-                "gain_pct"     : gain_pct,
-                "xirr"         : scheme_xirr,
-                "sip_amount"   : sip_amount,
-                "valuation_date": val_date,
-                "txn_count"    : len(transactions),
-                "type"         : scheme.get("type", ""),
-            })
+                schemes.append({
+                    "amc"          : amc,
+                    "scheme"       : scheme.get("scheme", ""),
+                    "isin"         : scheme.get("isin", ""),
+                    "folio"        : folio.get("folio", ""),
+                    "units"        : round(float(units), 4),
+                    "nav"          : valuation.get("nav", 0),
+                    "current_value": round(float(current_val), 2),
+                    "cost"         : round(float(cost_val), 2),
+                    "gain"         : round(float(gain), 2) if gain is not None else None,
+                    "gain_pct"     : gain_pct,
+                    "xirr"         : scheme_xirr,
+                    "sip_amount"   : sip_amount,
+                    "valuation_date": val_date,
+                    "txn_count"    : len(transactions),
+                    "type"         : scheme.get("type", ""),
+                })
+            except Exception as e:
+                print(f"[SCHEME ERROR] {scheme.get('scheme','')[:40]} | error={str(e)}")
 
     # Summary
     total_value  = sum(s["current_value"] for s in schemes)
