@@ -6,8 +6,17 @@ import sqlite3
 import json
 import os
 import uuid
+import base64
+import tempfile
 from datetime import datetime, timedelta
 import secrets
+
+# casparser — handles both CAMS and KFintech CAS PDFs
+try:
+    import casparser
+    CASPARSER_AVAILABLE = True
+except ImportError:
+    CASPARSER_AVAILABLE = False
 
 app = Flask(__name__)
 CORS(app)
@@ -29,18 +38,20 @@ if not ANTHROPIC_KEY:
 if not ADVISOR_USER or not ADVISOR_PASS:
     raise RuntimeError("ADVISOR_USER and ADVISOR_PASS environment variables must be set")
 
-# Simple in-memory rate limiter for login — max 10 attempts per IP per minute
+# Rate limiter — tracks FAILED attempts per IP, not all attempts
+# Blocks after 10 failed attempts per minute (brute force protection)
 from collections import defaultdict
-_login_attempts = defaultdict(list)
+_failed_attempts = defaultdict(list)
 
 def check_rate_limit(ip):
-    now = datetime.now()
+    """Returns True if request is allowed, False if rate limited."""
+    now    = datetime.now()
     cutoff = now - timedelta(minutes=1)
-    _login_attempts[ip] = [t for t in _login_attempts[ip] if t > cutoff]
-    if len(_login_attempts[ip]) >= 10:
-        return False
-    _login_attempts[ip].append(now)
-    return True
+    _failed_attempts[ip] = [t for t in _failed_attempts[ip] if t > cutoff]
+    return len(_failed_attempts[ip]) < 10
+
+def record_failed_login(ip):
+    _failed_attempts[ip].append(datetime.now())
 
 # ---- DATABASE ----
 def get_db():
@@ -168,6 +179,21 @@ def init_db():
         id TEXT PRIMARY KEY, client_id TEXT NOT NULL, plan TEXT NOT NULL,
         created_at TEXT, updated_at TEXT)""")
 
+    # CAS portfolios — parsed mutual fund data per member
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS cas_portfolios (
+            id          TEXT PRIMARY KEY,
+            family_id   TEXT NOT NULL,
+            member_id   TEXT NOT NULL,
+            cas_type    TEXT,
+            parsed_data TEXT NOT NULL,
+            uploaded_at TEXT,
+            FOREIGN KEY (family_id) REFERENCES families(id),
+            FOREIGN KEY (member_id) REFERENCES family_members(id),
+            UNIQUE(member_id)
+        )
+    """)
+
     conn.commit()
     conn.close()
     print("Database initialized")
@@ -225,7 +251,7 @@ def require_auth(role=None):
 def login():
     ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
     if not check_rate_limit(ip):
-        return jsonify({"error": "Too many login attempts. Please wait a minute."}), 429
+        return jsonify({"error": "Too many failed login attempts. Please wait a minute."}), 429
 
     data     = request.json
     username = data.get("username", "").strip().lower()
@@ -249,6 +275,8 @@ def login():
             "allow_password_change": bool(member["allow_password_change"])
         })
 
+    # Only count failed attempts toward rate limit
+    record_failed_login(ip)
     return jsonify({"error": "Invalid username or password"}), 401
 
 @app.route("/api/logout", methods=["POST"])
@@ -713,6 +741,267 @@ Use ₹ for amounts. Be specific with numbers. Address both members by name."""
     conn.commit()
     conn.close()
     return jsonify({"status":"success","plan":plan_text,"updated_at":now})
+
+# ================================================================
+#  XIRR — pure Python, no scipy needed
+# ================================================================
+def xirr(cashflows):
+    """
+    cashflows: list of (date_str_YYYY-MM-DD, amount)
+    Positive = inflow (purchase), Negative = outflow (redemption/current value)
+    Returns annualised XIRR as a float (e.g. 0.142 = 14.2%), or None if fails.
+    """
+    if len(cashflows) < 2:
+        return None
+    try:
+        from datetime import date as dt
+        dates   = [datetime.strptime(d, "%Y-%m-%d").date() for d, _ in cashflows]
+        amounts = [a for _, a in cashflows]
+        t0      = dates[0]
+        days    = [(d - t0).days for d in dates]
+
+        def npv(rate):
+            return sum(a / ((1 + rate) ** (d / 365.0)) for a, d in zip(amounts, days))
+
+        # Bisect between -0.999 and 100 (i.e. -99.9% to 10000% return)
+        lo, hi = -0.999, 100.0
+        for _ in range(300):
+            mid = (lo + hi) / 2
+            val = npv(mid)
+            if abs(val) < 0.01:
+                return round(mid * 100, 2)
+            if val > 0:
+                lo = mid
+            else:
+                hi = mid
+        return round(((lo + hi) / 2) * 100, 2)
+    except Exception:
+        return None
+
+
+def compute_scheme_xirr(transactions, current_value, valuation_date):
+    """Build cashflow list from CAS transactions and compute XIRR."""
+    cashflows = []
+    for txn in transactions:
+        try:
+            date   = txn.get("date", "")
+            amount = float(txn.get("amount") or 0)
+            ttype  = (txn.get("type") or "").upper()
+            if not date or not amount:
+                continue
+            # Purchases/SIPs are outflows (negative), redemptions are inflows (positive)
+            if any(k in ttype for k in ["PURCHASE", "SIP", "SWITCH_IN", "REINVEST"]):
+                cashflows.append((date, -abs(amount)))
+            elif any(k in ttype for k in ["REDEMPTION", "SWITCH_OUT"]):
+                cashflows.append((date, abs(amount)))
+        except Exception:
+            continue
+
+    if not cashflows:
+        return None
+
+    # Add current value as final inflow
+    try:
+        cashflows.append((valuation_date, float(current_value)))
+        cashflows.sort(key=lambda x: x[0])
+        return xirr(cashflows)
+    except Exception:
+        return None
+
+
+def detect_sip_amount(transactions):
+    """Detect recurring SIP amount by finding the most common purchase amount."""
+    from collections import Counter
+    sip_amounts = []
+    for txn in transactions:
+        ttype = (txn.get("type") or "").upper()
+        amount = float(txn.get("amount") or 0)
+        if "SIP" in ttype or ("PURCHASE" in ttype and amount > 0):
+            sip_amounts.append(round(amount / 100) * 100)  # round to nearest 100
+    if not sip_amounts:
+        return None
+    most_common = Counter(sip_amounts).most_common(1)[0]
+    return most_common[0] if most_common[1] >= 2 else None  # only if seen ≥2 times
+
+
+# ================================================================
+#  CAS ROUTES
+# ================================================================
+@app.route("/api/families/<family_id>/members/<member_id>/cas/upload", methods=["POST"])
+def upload_cas(family_id, member_id):
+    """Advisor uploads CAS PDF for a member. Accepts base64-encoded PDF + password."""
+    auth = require_auth("advisor")
+    if auth: return auth
+
+    if not CASPARSER_AVAILABLE:
+        return jsonify({"error": "casparser not installed. Add 'casparser' to requirements.txt and redeploy."}), 503
+
+    data     = request.json
+    pdf_b64  = data.get("pdf_data", "")
+    password = data.get("password", "")
+
+    if not pdf_b64:
+        return jsonify({"error": "No PDF data provided"}), 400
+
+    # Decode base64 → temp file
+    try:
+        if "," in pdf_b64:
+            pdf_b64 = pdf_b64.split(",", 1)[1]
+        pdf_bytes = base64.b64decode(pdf_b64)
+    except Exception:
+        return jsonify({"error": "Invalid base64 PDF data"}), 400
+
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            tmp.write(pdf_bytes)
+            tmp_path = tmp.name
+
+        result = casparser.read_cas_pdf(tmp_path, password or "")
+        os.unlink(tmp_path)
+    except Exception as e:
+        return jsonify({"error": f"Failed to parse CAS: {str(e)}"}), 400
+
+    # Process parsed data — compute XIRR and detect SIPs
+    cas_type = result.get("file_type", "UNKNOWN")
+    folios   = result.get("folios", [])
+    schemes  = []
+
+    for folio in folios:
+        amc = folio.get("amc", "")
+        for scheme in folio.get("schemes", []):
+            valuation   = scheme.get("valuation", {})
+            transactions = scheme.get("transactions", [])
+            current_val  = valuation.get("value", 0) or 0
+            cost_val     = valuation.get("cost", 0) or 0
+            val_date     = str(valuation.get("date", ""))
+            units        = scheme.get("close", 0) or 0
+
+            scheme_xirr  = compute_scheme_xirr(transactions, current_val, val_date) if current_val else None
+            sip_amount   = detect_sip_amount(transactions)
+
+            gain     = (current_val - cost_val) if current_val and cost_val else None
+            gain_pct = round((gain / cost_val * 100), 2) if gain and cost_val else None
+
+            schemes.append({
+                "amc"          : amc,
+                "scheme"       : scheme.get("scheme", ""),
+                "isin"         : scheme.get("isin", ""),
+                "folio"        : folio.get("folio", ""),
+                "units"        : round(float(units), 4),
+                "nav"          : valuation.get("nav", 0),
+                "current_value": round(float(current_val), 2),
+                "cost"         : round(float(cost_val), 2),
+                "gain"         : round(float(gain), 2) if gain is not None else None,
+                "gain_pct"     : gain_pct,
+                "xirr"         : scheme_xirr,
+                "sip_amount"   : sip_amount,
+                "valuation_date": val_date,
+                "txn_count"    : len(transactions),
+                "type"         : scheme.get("type", ""),
+            })
+
+    # Summary
+    total_value  = sum(s["current_value"] for s in schemes)
+    total_cost   = sum(s["cost"] for s in schemes)
+    total_sip    = sum(s["sip_amount"] for s in schemes if s["sip_amount"])
+    active_sips  = [s for s in schemes if s["sip_amount"]]
+
+    investor = result.get("investor_info", {})
+    parsed   = {
+        "cas_type"     : cas_type,
+        "investor"     : investor,
+        "statement_period": result.get("statement_period", {}),
+        "schemes"      : schemes,
+        "summary": {
+            "total_value" : round(total_value, 2),
+            "total_cost"  : round(total_cost, 2),
+            "total_gain"  : round(total_value - total_cost, 2),
+            "gain_pct"    : round((total_value - total_cost) / total_cost * 100, 2) if total_cost else 0,
+            "total_sip"   : total_sip,
+            "active_sips" : len(active_sips),
+            "scheme_count": len(schemes),
+            "folio_count" : len(folios),
+        }
+    }
+
+    now  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_db()
+    try:
+        existing = conn.execute(
+            "SELECT id FROM cas_portfolios WHERE member_id=?", (member_id,)
+        ).fetchone()
+        if existing:
+            conn.execute(
+                "UPDATE cas_portfolios SET parsed_data=?,cas_type=?,uploaded_at=? WHERE member_id=?",
+                (json.dumps(parsed), cas_type, now, member_id)
+            )
+        else:
+            conn.execute(
+                "INSERT INTO cas_portfolios (id,family_id,member_id,cas_type,parsed_data,uploaded_at) VALUES (?,?,?,?,?,?)",
+                (str(uuid.uuid4()), family_id, member_id, cas_type, json.dumps(parsed), now)
+            )
+        conn.commit()
+        return jsonify({"status": "success", "summary": parsed["summary"],
+                        "cas_type": cas_type, "uploaded_at": now})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Storage failed: {str(e)}"}), 500
+    finally:
+        conn.close()
+
+
+@app.route("/api/families/<family_id>/members/<member_id>/cas", methods=["GET"])
+def get_cas(family_id, member_id):
+    auth = require_auth()
+    if auth: return auth
+
+    session = get_session()
+    if session["role"] == "client" and session.get("family_id") != family_id:
+        return jsonify({"error": "Access denied"}), 403
+
+    conn = get_db()
+    row  = conn.execute(
+        "SELECT * FROM cas_portfolios WHERE member_id=?", (member_id,)
+    ).fetchone()
+    conn.close()
+
+    if not row:
+        return jsonify({"data": None})
+    return jsonify({"data": json.loads(row["parsed_data"]), "uploaded_at": row["uploaded_at"]})
+
+
+@app.route("/api/families/<family_id>/cas", methods=["GET"])
+def get_family_cas(family_id):
+    """Get CAS data for all members of a family (combined view)."""
+    auth = require_auth()
+    if auth: return auth
+
+    session = get_session()
+    if session["role"] == "client" and session.get("family_id") != family_id:
+        return jsonify({"error": "Access denied"}), 403
+
+    conn     = get_db()
+    members  = conn.execute(
+        "SELECT id, name FROM family_members WHERE family_id=?", (family_id,)
+    ).fetchall()
+    rows     = conn.execute(
+        "SELECT member_id, parsed_data, uploaded_at FROM cas_portfolios WHERE family_id=?",
+        (family_id,)
+    ).fetchall()
+    conn.close()
+
+    member_map = {m["id"]: m["name"] for m in members}
+    result     = {}
+    for row in rows:
+        mid  = row["member_id"]
+        data = json.loads(row["parsed_data"])
+        result[mid] = {
+            "member_name": member_map.get(mid, "Unknown"),
+            "uploaded_at": row["uploaded_at"],
+            **data
+        }
+    return jsonify(result)
+
 
 # ================================================================
 #  DEBUG + STATIC

@@ -333,6 +333,10 @@ input,select,textarea{font-family:inherit;outline:none}
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         Cash Flow
       </div>
+      <div class="nav-item" onclick="showPage('cl-mf')" data-page="cl-mf">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        Mutual Funds
+      </div>
       <div class="nav-item" onclick="showPage('cl-plan')" data-page="cl-plan">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         Financial Plan
@@ -426,6 +430,7 @@ input,select,textarea{font-family:inherit;outline:none}
           <div class="tab" onclick="switchFamilyTab('insurance')" data-tab="insurance">Insurance</div>
           <div class="tab" onclick="switchFamilyTab('goals')" data-tab="goals">Goals</div>
           <div class="tab" onclick="switchFamilyTab('risk_profile')" data-tab="risk_profile">Risk Profile</div>
+          <div class="tab" onclick="switchFamilyTab('mutual_funds')" data-tab="mutual_funds">📈 Mutual Funds</div>
           <div class="tab" onclick="switchFamilyTab('plan')" data-tab="plan">📋 Plan</div>
         </div>
 
@@ -466,6 +471,13 @@ input,select,textarea{font-family:inherit;outline:none}
         <div class="grid-2" style="margin-top:18px">
           <div class="card"><div class="card-title">Expense Breakdown</div><div class="chart-wrap"><canvas id="cf-chart"></canvas></div></div>
           <div class="card"><div class="card-title">Per Member</div><div id="cf-per-member"></div></div>
+        </div>
+      </div>
+
+      <!-- CLIENT: MUTUAL FUNDS -->
+      <div class="page" id="page-cl-mf">
+        <div id="cl-mf-content">
+          <div class="empty"><div class="icon">📈</div><h3>No portfolio data yet</h3><p>Your advisor will upload your CAS statement to show your mutual fund portfolio.</p></div>
         </div>
       </div>
 
@@ -525,6 +537,10 @@ input,select,textarea{font-family:inherit;outline:none}
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         Cash Flow
       </button>
+      <button class="bnav-item" onclick="showPage('cl-mf');setBnav(this)">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        MF
+      </button>
       <button class="bnav-item" onclick="showPage('cl-plan');setBnav(this)">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         My Plan
@@ -540,6 +556,33 @@ input,select,textarea{font-family:inherit;outline:none}
     </div>
   </nav>
 </div><!-- /app-screen -->
+
+<!-- MODAL: CAS UPLOAD -->
+<div class="modal-overlay" id="modal-cas-upload">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Upload CAS — <span id="cas-member-name"></span></div>
+      <button class="btn-close" onclick="closeModal('modal-cas-upload')">×</button>
+    </div>
+    <div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:13px;color:var(--text-muted);line-height:1.5">
+      Upload a <strong>CAMS or KFintech CAS PDF</strong>. The PDF is password-protected — enter the password you set when requesting the statement.
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>CAS PDF File *</label>
+      <input type="file" id="cas-file-input" accept="application/pdf"
+        style="padding:8px 12px;border:1px solid var(--gray-200);border-radius:7px;width:100%;font-size:13px">
+    </div>
+    <div class="form-group" style="margin-bottom:6px">
+      <label>PDF Password *</label>
+      <input type="password" id="cas-password" placeholder="Password used to protect the CAS PDF">
+    </div>
+    <div id="cas-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--red);font-size:13px;padding:10px 12px;border-radius:7px;margin-top:12px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-cas-upload')">Cancel</button>
+      <button class="btn btn-blue" id="cas-upload-btn" onclick="submitCasUpload()">Upload & Parse</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL: EDIT MEMBER -->
 <div class="modal-overlay" id="modal-edit-member">
@@ -969,9 +1012,10 @@ function renderFamilyTab(tab) {
   const memberData = data.member_data || {};
   const familyData = data.family_data || {};
 
-  if (tab === 'overview') { renderAdvisorOverview(el, members, memberData, familyData); return; }
-  if (tab === 'members')  { renderMembersTab(el, members); return; }
-  if (tab === 'plan')     { renderAdvisorPlan(el); return; }
+  if (tab === 'overview')      { renderAdvisorOverview(el, members, memberData, familyData); return; }
+  if (tab === 'members')       { renderMembersTab(el, members); return; }
+  if (tab === 'plan')          { renderAdvisorPlan(el); return; }
+  if (tab === 'mutual_funds')  { renderAdvisorMF(el, members); return; }
   if (tab === 'goals')    { renderFamilySection(el, 'goals', familyData.goals||{}, null, true); return; }
 
   // Per-member section
@@ -1428,6 +1472,7 @@ async function loadClientView() {
   renderClientNetWorth();
   renderClientCashFlow();
   renderClientPlan();
+  loadClientMF();
 }
 
 function renderClientOverview() {
@@ -1799,6 +1844,332 @@ function renderClientPlan() {
       : `<div class="plan-output">${formatPlan(plan.plan)}</div>`
     }
   </div>`;
+}
+
+// ================================================================
+//  MUTUAL FUNDS — ADVISOR VIEW
+// ================================================================
+let mfChart = null;
+
+async function renderAdvisorMF(el, members) {
+  el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-muted)">Loading portfolio data…</div>`;
+
+  // Load CAS for all members in parallel
+  const results = await Promise.all(
+    members.map(m => api(`/api/families/${currentFamilyId}/members/${m.id}/cas`)
+      .then(r => ({ member: m, data: r?.data || null, uploaded_at: r?.uploaded_at })))
+  );
+
+  const fmtXirr = x => x == null ? '—' : `${x > 0 ? '+' : ''}${x}%`;
+  const xirrColor = x => x == null ? 'var(--text-muted)' : x >= 12 ? 'var(--green)' : x >= 0 ? 'var(--amber)' : 'var(--red)';
+  const gainColor = g => (g || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Build combined summary across all members
+  let combinedSchemes = [];
+  let totalValue = 0, totalCost = 0, totalSip = 0;
+
+  results.forEach(({ member, data }) => {
+    if (!data) return;
+    data.schemes.forEach(s => combinedSchemes.push({ ...s, member_name: member.name }));
+    totalValue += data.summary.total_value || 0;
+    totalCost  += data.summary.total_cost  || 0;
+    totalSip   += data.summary.total_sip   || 0;
+  });
+
+  el.innerHTML = `
+    <!-- Summary stats -->
+    <div class="stats-grid" style="margin-bottom:18px">
+      <div class="stat-card"><div class="stat-label">Total MF Value</div>
+        <div class="stat-value blue">${fmtL(totalValue)}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Invested</div>
+        <div class="stat-value">${fmtL(totalCost)}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Gain</div>
+        <div class="stat-value" style="color:${gainColor(totalValue-totalCost)}">${fmtL(totalValue-totalCost)}
+          <span style="font-size:13px;font-weight:400">(${totalCost?(((totalValue-totalCost)/totalCost)*100).toFixed(1):0}%)</span></div></div>
+      <div class="stat-card"><div class="stat-label">Monthly SIP</div>
+        <div class="stat-value green">${fmtL(totalSip)}</div></div>
+    </div>
+
+    <!-- Per-member upload + summary cards -->
+    <div class="grid-2" style="margin-bottom:18px">
+      ${results.map(({ member, data, uploaded_at }) => `
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:34px;height:34px;border-radius:50%;background:${avatarColor(member.name)};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">${inits(member.name)}</div>
+              <div>
+                <div style="font-weight:600;font-size:13px">${member.name}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${data ? `Updated ${uploaded_at?.split(' ')[0]||''}` : 'No CAS uploaded'}</div>
+              </div>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="openCasUpload('${member.id}','${member.name.replace(/'/g,"\\'")}')">
+              ${data ? '↻ Re-upload' : '⬆ Upload CAS'}
+            </button>
+          </div>
+          ${data ? `
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px">
+              <div style="background:var(--gray-50);border-radius:7px;padding:8px;text-align:center">
+                <div style="color:var(--text-muted);margin-bottom:2px">Value</div>
+                <div style="font-weight:600;font-family:'DM Mono',monospace">${fmtL(data.summary.total_value)}</div>
+              </div>
+              <div style="background:var(--gray-50);border-radius:7px;padding:8px;text-align:center">
+                <div style="color:var(--text-muted);margin-bottom:2px">Gain</div>
+                <div style="font-weight:600;font-family:'DM Mono',monospace;color:${gainColor(data.summary.total_gain)}">${fmtL(data.summary.total_gain)}</div>
+              </div>
+              <div style="background:var(--gray-50);border-radius:7px;padding:8px;text-align:center">
+                <div style="color:var(--text-muted);margin-bottom:2px">SIP/mo</div>
+                <div style="font-weight:600;font-family:'DM Mono',monospace">${fmtL(data.summary.total_sip)}</div>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:8px">${data.summary.scheme_count} schemes · ${data.cas_type}</div>
+          ` : `<div style="color:var(--text-muted);font-size:13px;padding:8px 0">Upload CAS PDF to see mutual fund portfolio</div>`}
+        </div>`).join('')}
+    </div>
+
+    <!-- Combined holdings table -->
+    ${combinedSchemes.length ? `
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div class="card-title" style="margin:0">All Holdings</div>
+        <div style="display:flex;gap:8px">
+          <input type="text" placeholder="Search scheme…" oninput="filterMFTable(this.value)"
+            style="padding:7px 12px;border:1px solid var(--gray-200);border-radius:7px;font-size:13px;width:200px">
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="tbl" id="mf-holdings-table">
+          <thead><tr>
+            <th>Scheme</th><th>Member</th><th>Units</th>
+            <th style="text-align:right">Invested</th>
+            <th style="text-align:right">Current Value</th>
+            <th style="text-align:right">Gain / Loss</th>
+            <th style="text-align:right">XIRR</th>
+            <th style="text-align:right">SIP / mo</th>
+          </tr></thead>
+          <tbody>
+            ${combinedSchemes.map(s => `
+              <tr class="mf-row">
+                <td>
+                  <div style="font-weight:500;font-size:13px;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.scheme}</div>
+                  <div style="font-size:11px;color:var(--text-muted)">${s.amc} · ${s.type||'—'}</div>
+                </td>
+                <td><span class="badge badge-gray" style="font-size:11px">${s.member_name}</span></td>
+                <td class="mono" style="font-size:12px">${s.units?.toLocaleString('en-IN')}</td>
+                <td class="mono" style="text-align:right">${fmtL(s.cost)}</td>
+                <td class="mono" style="text-align:right;font-weight:500">${fmtL(s.current_value)}</td>
+                <td style="text-align:right">
+                  <div class="mono" style="color:${gainColor(s.gain)};font-size:13px">${fmtL(s.gain)}</div>
+                  <div style="font-size:11px;color:${gainColor(s.gain_pct)}">${s.gain_pct!=null?s.gain_pct+'%':'—'}</div>
+                </td>
+                <td class="mono" style="text-align:right;font-weight:600;color:${xirrColor(s.xirr)}">${fmtXirr(s.xirr)}</td>
+                <td class="mono" style="text-align:right">${s.sip_amount ? fmtL(s.sip_amount) : '—'}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>` : ''}
+  `;
+
+  // Render allocation chart if we have data
+  if (combinedSchemes.length) renderMFAllocChart(combinedSchemes);
+}
+
+function filterMFTable(query) {
+  const q = query.toLowerCase();
+  document.querySelectorAll('#mf-holdings-table .mf-row').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function renderMFAllocChart(schemes) {
+  // Group by AMC
+  const byAmc = {};
+  schemes.forEach(s => {
+    byAmc[s.amc] = (byAmc[s.amc] || 0) + s.current_value;
+  });
+  const sorted = Object.entries(byAmc).sort((a,b) => b[1]-a[1]).slice(0, 8);
+  // Chart is rendered inline in the table card area — skip if no canvas
+}
+
+// ================================================================
+//  CAS UPLOAD MODAL
+// ================================================================
+let casUploadMemberId = null;
+
+function openCasUpload(memberId, memberName) {
+  casUploadMemberId = memberId;
+  document.getElementById('cas-member-name').textContent = memberName;
+  document.getElementById('cas-file-input').value = '';
+  document.getElementById('cas-password').value = '';
+  document.getElementById('cas-error').style.display = 'none';
+  document.getElementById('cas-upload-btn').disabled = false;
+  document.getElementById('cas-upload-btn').textContent = 'Upload & Parse';
+  openModal('modal-cas-upload');
+}
+
+async function submitCasUpload() {
+  const fileInput = document.getElementById('cas-file-input');
+  const password  = document.getElementById('cas-password').value;
+  const errEl     = document.getElementById('cas-error');
+  const btn       = document.getElementById('cas-upload-btn');
+
+  if (!fileInput.files[0]) { errEl.textContent='Please select a CAS PDF file'; errEl.style.display='block'; return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="border-top-color:var(--accent);border-color:var(--gray-200);width:15px;height:15px"></div> Parsing…';
+  errEl.style.display = 'none';
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const res = await api(`/api/families/${currentFamilyId}/members/${casUploadMemberId}/cas/upload`, {
+      method: 'POST',
+      body: { pdf_data: e.target.result, password }
+    });
+
+    btn.disabled = false;
+    btn.textContent = 'Upload & Parse';
+
+    if (res?.status === 'success') {
+      const s = res.summary;
+      toast(`✅ Parsed! ${s.scheme_count} schemes · ₹${(s.total_value/100000).toFixed(1)}L value`, 'success');
+      closeModal('modal-cas-upload');
+      // Re-render the MF tab
+      const members = currentFamilyData.members || [];
+      renderAdvisorMF(document.getElementById('family-tab-content'), members);
+    } else {
+      errEl.textContent = res?.error || 'Upload failed';
+      errEl.style.display = 'block';
+    }
+  };
+  reader.readAsDataURL(fileInput.files[0]);
+}
+
+// ================================================================
+//  MUTUAL FUNDS — CLIENT VIEW
+// ================================================================
+async function loadClientMF() {
+  const members = currentFamilyData.members || [];
+  const el = document.getElementById('cl-mf-content');
+  if (!members.length) return;
+
+  el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-muted)">Loading portfolio…</div>`;
+
+  const results = await Promise.all(
+    members.map(m => api(`/api/families/${auth.familyId}/members/${m.id}/cas`)
+      .then(r => ({ member: m, data: r?.data || null, uploaded_at: r?.uploaded_at })))
+  );
+
+  const hasAny = results.some(r => r.data);
+  if (!hasAny) {
+    el.innerHTML = `<div class="empty"><div class="icon">📈</div><h3>No portfolio data yet</h3><p>Your advisor will upload your CAS statement to show your mutual fund portfolio.</p></div>`;
+    return;
+  }
+
+  const fmtXirr  = x => x == null ? '—' : `${x > 0 ? '+' : ''}${x}%`;
+  const xirrColor= x => x == null ? 'var(--text-muted)' : x >= 12 ? 'var(--green)' : x >= 0 ? 'var(--amber)' : 'var(--red)';
+  const gainColor= g => (g || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+
+  let totalValue=0, totalCost=0, totalSip=0, allSchemes=[];
+  results.forEach(({ member, data }) => {
+    if (!data) return;
+    totalValue += data.summary.total_value || 0;
+    totalCost  += data.summary.total_cost  || 0;
+    totalSip   += data.summary.total_sip   || 0;
+    data.schemes.forEach(s => allSchemes.push({...s, member_name: member.name}));
+  });
+
+  el.innerHTML = `
+    <div class="stats-grid" style="margin-bottom:18px">
+      <div class="stat-card"><div class="stat-label">Portfolio Value</div><div class="stat-value blue">${fmtL(totalValue)}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Invested</div><div class="stat-value">${fmtL(totalCost)}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Gain</div>
+        <div class="stat-value" style="color:${gainColor(totalValue-totalCost)}">${fmtL(totalValue-totalCost)}</div>
+        <div class="stat-sub">${totalCost?(((totalValue-totalCost)/totalCost)*100).toFixed(1):0}% overall</div></div>
+      <div class="stat-card"><div class="stat-label">Monthly SIP</div><div class="stat-value green">${fmtL(totalSip)}</div></div>
+    </div>
+
+    ${members.length > 1 ? `
+    <div class="member-tab-bar" id="mf-member-tabs" style="margin-bottom:16px">
+      <div class="member-tab active" onclick="switchMFMember('all',this)">All Members</div>
+      ${results.filter(r=>r.data).map(({member})=>`
+        <div class="member-tab" onclick="switchMFMember('${member.id}',this)" data-mid="${member.id}">
+          <div class="member-avatar" style="background:${avatarColor(member.name)};color:#fff">${inits(member.name)}</div>
+          ${member.name.split(' ')[0]}
+        </div>`).join('')}
+    </div>` : ''}
+
+    <div id="mf-schemes-view">
+      ${renderSchemesTable(allSchemes, fmtXirr, xirrColor, gainColor)}
+    </div>`;
+
+  // Store for member switching
+  window._mfResults = results;
+  window._mfFmtXirr = fmtXirr;
+  window._mfXirrColor = xirrColor;
+  window._mfGainColor = gainColor;
+}
+
+function switchMFMember(memberId, el) {
+  document.querySelectorAll('#mf-member-tabs .member-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  const schemes = memberId === 'all'
+    ? window._mfResults.flatMap(r => r.data ? r.data.schemes.map(s=>({...s,member_name:r.member.name})) : [])
+    : (window._mfResults.find(r=>r.member.id===memberId)?.data?.schemes || []);
+  document.getElementById('mf-schemes-view').innerHTML = renderSchemesTable(
+    schemes, window._mfFmtXirr, window._mfXirrColor, window._mfGainColor
+  );
+}
+
+function renderSchemesTable(schemes, fmtXirr, xirrColor, gainColor) {
+  if (!schemes.length) return '<div class="empty" style="padding:30px"><p>No holdings data</p></div>';
+
+  // Group by AMC
+  const byAmc = {};
+  schemes.forEach(s => {
+    if (!byAmc[s.amc]) byAmc[s.amc] = [];
+    byAmc[s.amc].push(s);
+  });
+
+  return Object.entries(byAmc).map(([amc, amcSchemes]) => {
+    const amcVal = amcSchemes.reduce((s,sc)=>s+(sc.current_value||0),0);
+    return `
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-weight:600;font-size:14px">${amc}</div>
+        <div class="mono" style="font-size:13px;font-weight:600;color:var(--accent)">${fmtL(amcVal)}</div>
+      </div>
+      ${amcSchemes.map(s => `
+        <div style="border:1px solid var(--gray-100);border-radius:9px;padding:14px;margin-bottom:10px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div style="flex:1;min-width:200px">
+              <div style="font-weight:500;font-size:13px;line-height:1.4">${s.scheme}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:3px">${s.type||'—'} · ${s.units?.toLocaleString('en-IN')} units · NAV ₹${s.nav}</div>
+              ${s.sip_amount ? `<div style="margin-top:6px"><span class="badge badge-blue" style="font-size:11px">SIP ₹${s.sip_amount.toLocaleString('en-IN')}/mo</span></div>` : ''}
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;min-width:260px">
+              <div style="text-align:center">
+                <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">Invested</div>
+                <div class="mono" style="font-size:13px;font-weight:500">${fmtL(s.cost)}</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">Current</div>
+                <div class="mono" style="font-size:13px;font-weight:600">${fmtL(s.current_value)}</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">XIRR</div>
+                <div class="mono" style="font-size:14px;font-weight:700;color:${xirrColor(s.xirr)}">${fmtXirr(s.xirr)}</div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+            <div style="flex:1;height:5px;background:var(--gray-200);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${Math.min(100,(s.current_value/(s.cost||1))*50)}%;background:${gainColor(s.gain)};border-radius:3px"></div>
+            </div>
+            <span style="font-size:12px;font-weight:600;color:${gainColor(s.gain)}">${s.gain_pct!=null?(s.gain_pct>=0?'+':'')+s.gain_pct+'%':'—'}</span>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
 }
 </script>
 </body>
