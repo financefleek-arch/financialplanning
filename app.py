@@ -960,10 +960,11 @@ def upload_cas(family_id, member_id):
 
     for folio in folios:
         amc = folio.get("amc") or ""
-        print(f"[FOLIO] AMC={amc} | schemes={len(folio.get('schemes') or [])} | folio={folio.get('folio','')}")
-        for scheme in (folio.get("schemes") or []):
-            print(f"[SCHEME] {scheme.get('scheme','')[:40]} | close={scheme.get('close')} | txns={len(scheme.get('transactions') or [])} | valuation={scheme.get('valuation')}")
+        raw_schemes = folio.get("schemes") or []
+        print(f"[FOLIO] AMC={amc} | schemes={len(raw_schemes)} | folio={folio.get('folio','')}")
+        for idx, scheme in enumerate(raw_schemes):
             try:
+                print(f"[SCHEME] {scheme.get('scheme','')[:40]} | close={scheme.get('close')} | txns={len(scheme.get('transactions') or [])} | valuation={scheme.get('valuation')}")
                 valuation    = scheme.get("valuation") or {}
                 transactions = scheme.get("transactions") or []
                 current_val  = float(valuation.get("value") or 0)
