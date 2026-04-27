@@ -960,11 +960,8 @@ def upload_cas(family_id, member_id):
 
     for folio in folios:
         amc = folio.get("amc") or ""
-        raw_schemes = folio.get("schemes") or []
-        print(f"[FOLIO] AMC={amc} | schemes={len(raw_schemes)} | folio={folio.get('folio','')}")
-        for idx, scheme in enumerate(raw_schemes):
+        for scheme in (folio.get("schemes") or []):
             try:
-                print(f"[SCHEME] {scheme.get('scheme','')[:40]} | close={scheme.get('close')} | txns={len(scheme.get('transactions') or [])} | valuation={scheme.get('valuation')}")
                 valuation    = scheme.get("valuation") or {}
                 transactions = scheme.get("transactions") or []
                 current_val  = float(valuation.get("value") or 0)
@@ -974,38 +971,32 @@ def upload_cas(family_id, member_id):
 
                 try:
                     scheme_xirr = compute_scheme_xirr(transactions, current_val, val_date) if current_val else None
-                except Exception as e:
-                    print(f"[XIRR ERROR] {scheme.get('scheme','')[:40]} | {str(e)}")
+                except Exception:
                     scheme_xirr = None
-                sip_amount   = detect_sip_amount(transactions)
 
-                # Temp debug
-                if transactions:
-                    print(f"[SIP] {scheme.get('scheme','')[:35]} → sip={sip_amount}")
-                    print(f"[SIP_KEYS] {dict(transactions[0])}")
-
-                gain     = (current_val - cost_val) if current_val and cost_val else None
-                gain_pct = round((gain / cost_val * 100), 2) if gain and cost_val else None
+                sip_amount = detect_sip_amount(transactions)
+                gain       = (current_val - cost_val) if current_val and cost_val else None
+                gain_pct   = round((gain / cost_val * 100), 2) if gain and cost_val else None
 
                 schemes.append({
-                    "amc"          : amc,
-                    "scheme"       : scheme.get("scheme", ""),
-                    "isin"         : scheme.get("isin", ""),
-                    "folio"        : folio.get("folio", ""),
-                    "units"        : round(float(units), 4),
-                    "nav"          : valuation.get("nav", 0),
-                    "current_value": round(float(current_val), 2),
-                    "cost"         : round(float(cost_val), 2),
-                    "gain"         : round(float(gain), 2) if gain is not None else None,
-                    "gain_pct"     : gain_pct,
-                    "xirr"         : scheme_xirr,
-                    "sip_amount"   : sip_amount,
+                    "amc"           : amc,
+                    "scheme"        : scheme.get("scheme", ""),
+                    "isin"          : scheme.get("isin", ""),
+                    "folio"         : folio.get("folio", ""),
+                    "units"         : round(float(units), 4),
+                    "nav"           : valuation.get("nav", 0),
+                    "current_value" : round(float(current_val), 2),
+                    "cost"          : round(float(cost_val), 2),
+                    "gain"          : round(float(gain), 2) if gain is not None else None,
+                    "gain_pct"      : gain_pct,
+                    "xirr"          : scheme_xirr,
+                    "sip_amount"    : sip_amount,
                     "valuation_date": val_date,
-                    "txn_count"    : len(transactions),
-                    "type"         : scheme.get("type", ""),
+                    "txn_count"     : len(transactions),
+                    "type"          : scheme.get("type", ""),
                 })
             except Exception as e:
-                print(f"[SCHEME ERROR] {scheme.get('scheme','')[:40]} | error={str(e)}")
+                print(f"[SCHEME ERROR] {scheme.get('scheme','')[:40]} | {str(e)}")
 
     # Summary
     total_value  = sum(s["current_value"] for s in schemes)
@@ -1123,6 +1114,81 @@ def serve_index():
     if os.path.exists("index.html"):
         return send_from_directory(".", "index.html")
     return jsonify({"status":"Fleek Finance API running"})
+
+# ================================================================
+#  ERROR HANDLERS
+# ================================================================
+ERROR_PAGE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fleek Finance — {title}</title>
+<style>
+  *{{box-sizing:border-box;margin:0;padding:0}}
+  body{{font-family:'DM Sans',system-ui,sans-serif;background:#0D1B2A;color:#fff;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}}
+  .card{{background:#162033;border:1px solid rgba(255,255,255,.08);border-radius:16px;
+    padding:48px 44px;max-width:440px;width:100%;text-align:center}}
+  .logo{{font-size:22px;font-weight:600;color:#fff;margin-bottom:32px;letter-spacing:-.3px}}
+  .logo span{{color:#3B82F6}}
+  .code{{font-size:56px;font-weight:700;color:#3B82F6;font-family:monospace;line-height:1;margin-bottom:12px}}
+  .title{{font-size:20px;font-weight:600;margin-bottom:10px}}
+  .msg{{font-size:14px;color:rgba(255,255,255,.55);line-height:1.6;margin-bottom:32px}}
+  .btn{{display:inline-block;padding:12px 28px;background:#3B82F6;color:#fff;
+    border-radius:8px;text-decoration:none;font-size:14px;font-weight:500;transition:background .2s}}
+  .btn:hover{{background:#1D4ED8}}
+  .sub{{font-size:12px;color:rgba(255,255,255,.3);margin-top:20px}}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">fleek<span>.</span>finance</div>
+    <div class="code">{code}</div>
+    <div class="title">{title}</div>
+    <div class="msg">{message}</div>
+    <a href="/" class="btn">Go to Home</a>
+    <div class="sub">If the problem persists, contact us at fleekfinance.in</div>
+  </div>
+</body>
+</html>"""
+
+@app.errorhandler(404)
+def not_found(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Endpoint not found"}), 404
+    return ERROR_PAGE.format(
+        code="404", title="Page not found",
+        message="The page you're looking for doesn't exist or has been moved."
+    ), 404
+
+@app.errorhandler(500)
+def server_error(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Internal server error"}), 500
+    return ERROR_PAGE.format(
+        code="500", title="Something went wrong",
+        message="We're experiencing a temporary issue. Please try again in a few minutes."
+    ), 500
+
+@app.errorhandler(503)
+def service_unavailable(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Service temporarily unavailable"}), 503
+    return ERROR_PAGE.format(
+        code="503", title="Be right back",
+        message="Fleek Finance is undergoing a brief maintenance. We'll be back shortly."
+    ), 503
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    print(f"[UNHANDLED ERROR] {str(e)}")
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "An unexpected error occurred"}), 500
+    return ERROR_PAGE.format(
+        code="500", title="Something went wrong",
+        message="We're experiencing a temporary issue. Please try again in a few minutes."
+    ), 500
 
 if __name__ == "__main__":
     port  = int(os.environ.get("PORT", 8080))
