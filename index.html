@@ -4,621 +4,336 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fleek Finance</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Fraunces:wght@300;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-/* ── TOKENS ─────────────────────────────────────────────────────── */
 :root {
-  --navy:       #0D1B2A;
-  --navy-mid:   #162033;
-  --navy-light: #1E2E45;
-  --navy-hover: #243550;
-  --accent:     #3B82F6;
-  --accent-dim: #1D4ED8;
-  --green:      #10B981;
-  --red:        #EF4444;
-  --amber:      #F59E0B;
-  --white:      #FFFFFF;
-  --gray-100:   #F3F4F8;
-  --gray-200:   #E5E7EB;
-  --gray-400:   #9CA3AF;
-  --gray-600:   #6B7280;
-  --text:       #111827;
-  --text-muted: #6B7280;
-  --sidebar-w:  240px;
-  --header-h:   56px;
-  --radius:     10px;
-  --shadow:     0 2px 12px rgba(0,0,0,.08);
-  --shadow-lg:  0 8px 32px rgba(0,0,0,.12);
+  --navy:#0D1B2A; --navy-mid:#162033; --navy-light:#1E2E45; --navy-hover:#243550;
+  --accent:#3B82F6; --accent-dim:#1D4ED8;
+  --green:#10B981; --red:#EF4444; --amber:#F59E0B;
+  --white:#FFFFFF; --gray-50:#F9FAFB; --gray-100:#F3F4F8; --gray-200:#E5E7EB;
+  --gray-400:#9CA3AF; --gray-600:#6B7280;
+  --text:#111827; --text-muted:#6B7280;
+  --sidebar-w:240px; --radius:10px;
+  --shadow:0 2px 12px rgba(0,0,0,.08); --shadow-lg:0 8px 32px rgba(0,0,0,.12);
 }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--gray-100);color:var(--text);font-size:14px}
+button{font-family:inherit;cursor:pointer;border:none;outline:none}
+input,select,textarea{font-family:inherit;outline:none}
 
-/* ── RESET ──────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--gray-100); color: var(--text); font-size: 14px; }
-button { font-family: inherit; cursor: pointer; border: none; outline: none; }
-input, select, textarea { font-family: inherit; outline: none; }
-a { text-decoration: none; color: inherit; }
+/* ── SCREENS ── */
+.screen{display:none;min-height:100vh}
+.screen.active{display:flex}
 
-/* ── SCREENS ────────────────────────────────────────────────────── */
-.screen { display: none; min-height: 100vh; }
-.screen.active { display: flex; }
+/* ── LOGIN ── */
+#login-screen{align-items:center;justify-content:center;background:var(--navy);
+  background-image:radial-gradient(ellipse at 20% 50%,rgba(59,130,246,.15) 0%,transparent 60%)}
+.login-card{background:var(--navy-mid);border:1px solid rgba(255,255,255,.07);border-radius:16px;
+  padding:48px 44px;width:380px;box-shadow:0 24px 64px rgba(0,0,0,.4);animation:fadeUp .4s ease}
+.login-logo{font-family:'Fraunces',serif;font-size:26px;font-weight:600;color:var(--white);margin-bottom:6px}
+.login-logo span{color:var(--accent)}
+.login-sub{font-size:13px;color:var(--gray-400);margin-bottom:32px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--gray-400);letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px}
+.field input{width:100%;padding:11px 14px;background:var(--navy-light);border:1px solid rgba(255,255,255,.08);
+  border-radius:8px;color:var(--white);font-size:14px;transition:border-color .2s}
+.field input:focus{border-color:var(--accent)}
+.field input::placeholder{color:rgba(255,255,255,.25)}
+.btn-primary{width:100%;padding:12px;background:var(--accent);color:var(--white);border-radius:8px;
+  font-size:14px;font-weight:600;transition:background .2s;margin-top:8px}
+.btn-primary:hover{background:var(--accent-dim)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.login-error{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#FCA5A5;
+  font-size:13px;padding:10px 12px;border-radius:7px;margin-top:14px;display:none}
+.login-error.show{display:block}
 
-/* ══════════════════════════════════════════════════════════════════
-   LOGIN SCREEN
-══════════════════════════════════════════════════════════════════ */
-#login-screen {
-  align-items: center; justify-content: center;
-  background: var(--navy);
-  background-image: radial-gradient(ellipse at 20% 50%, rgba(59,130,246,.15) 0%, transparent 60%),
-                    radial-gradient(ellipse at 80% 20%, rgba(16,185,129,.08) 0%, transparent 50%);
-}
-.login-card {
-  background: var(--navy-mid);
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 16px;
-  padding: 48px 44px;
-  width: 380px;
-  box-shadow: 0 24px 64px rgba(0,0,0,.4);
-  animation: fadeUp .4s ease;
-}
-.login-logo {
-  font-family: 'Fraunces', serif;
-  font-size: 26px;
-  font-weight: 600;
-  color: var(--white);
-  margin-bottom: 6px;
-  letter-spacing: -.5px;
-}
-.login-logo span { color: var(--accent); }
-.login-sub { font-size: 13px; color: var(--gray-400); margin-bottom: 36px; }
-.field { margin-bottom: 18px; }
-.field label { display: block; font-size: 12px; font-weight: 500; color: var(--gray-400); letter-spacing: .04em; text-transform: uppercase; margin-bottom: 7px; }
-.field input {
-  width: 100%; padding: 11px 14px;
-  background: var(--navy-light); border: 1px solid rgba(255,255,255,.08);
-  border-radius: 8px; color: var(--white); font-size: 14px;
-  transition: border-color .2s;
-}
-.field input:focus { border-color: var(--accent); }
-.field input::placeholder { color: rgba(255,255,255,.25); }
-.btn-primary {
-  width: 100%; padding: 12px;
-  background: var(--accent); color: var(--white);
-  border-radius: 8px; font-size: 14px; font-weight: 600;
-  transition: background .2s, transform .1s;
-  margin-top: 8px;
-}
-.btn-primary:hover { background: var(--accent-dim); }
-.btn-primary:active { transform: scale(.98); }
-.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-.login-error { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); color: #FCA5A5; font-size: 13px; padding: 10px 12px; border-radius: 7px; margin-top: 14px; display: none; }
-.login-error.show { display: block; }
+/* ── APP SHELL ── */
+#app-screen{flex-direction:row}
+.sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--navy);display:flex;
+  flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:100;
+  transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.sidebar-logo{padding:20px 20px 16px;font-family:'Fraunces',serif;font-size:20px;font-weight:600;
+  color:var(--white);border-bottom:1px solid rgba(255,255,255,.06)}
+.sidebar-logo span{color:var(--accent)}
+.sidebar-role{margin:12px 20px 2px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.sidebar-user{padding:2px 20px 14px;font-size:13px;color:var(--gray-400);border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:8px}
+.nav-label{padding:14px 20px 5px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.25)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;margin:1px 8px;border-radius:7px;
+  color:rgba(255,255,255,.55);font-size:13.5px;cursor:pointer;transition:all .15s}
+.nav-item:hover{background:var(--navy-hover);color:var(--white)}
+.nav-item.active{background:rgba(59,130,246,.18);color:var(--accent);font-weight:500}
+.nav-item svg{flex-shrink:0;opacity:.7}
+.nav-item.active svg,.nav-item:hover svg{opacity:1}
+.sidebar-footer{margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,.06)}
+.btn-logout{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border-radius:7px;
+  background:transparent;color:rgba(255,255,255,.4);font-size:13px;transition:all .15s}
+.btn-logout:hover{background:rgba(239,68,68,.1);color:#FCA5A5}
 
-/* ══════════════════════════════════════════════════════════════════
-   APP SHELL (advisor + client share this)
-══════════════════════════════════════════════════════════════════ */
-#app-screen { flex-direction: row; }
+.main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;display:flex;flex-direction:column}
+.topbar{height:56px;background:var(--white);border-bottom:1px solid var(--gray-200);
+  display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:50}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar-title{font-size:16px;font-weight:600}
+.content{padding:24px;flex:1}
 
-/* SIDEBAR */
-.sidebar {
-  width: var(--sidebar-w); min-height: 100vh;
-  background: var(--navy);
-  display: flex; flex-direction: column;
-  flex-shrink: 0; position: fixed; top: 0; left: 0; bottom: 0;
-  z-index: 100;
-}
-.sidebar-logo {
-  padding: 20px 20px 16px;
-  font-family: 'Fraunces', serif;
-  font-size: 20px; font-weight: 600;
-  color: var(--white); letter-spacing: -.3px;
-  border-bottom: 1px solid rgba(255,255,255,.06);
-}
-.sidebar-logo span { color: var(--accent); }
-.sidebar-role-badge {
-  margin: 12px 20px 4px;
-  font-size: 10px; font-weight: 600; letter-spacing: .1em;
-  text-transform: uppercase; color: var(--accent);
-}
-.sidebar-user {
-  padding: 4px 20px 16px;
-  font-size: 13px; color: var(--gray-400);
-  border-bottom: 1px solid rgba(255,255,255,.06);
-  margin-bottom: 8px;
-}
-.nav-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 20px; margin: 1px 8px;
-  border-radius: 7px; color: rgba(255,255,255,.55);
-  font-size: 13.5px; font-weight: 400;
-  cursor: pointer; transition: all .15s;
-}
-.nav-item svg { flex-shrink: 0; opacity: .7; }
-.nav-item:hover { background: var(--navy-hover); color: var(--white); }
-.nav-item:hover svg { opacity: 1; }
-.nav-item.active { background: rgba(59,130,246,.18); color: var(--accent); font-weight: 500; }
-.nav-item.active svg { opacity: 1; }
-.nav-section-label {
-  padding: 16px 20px 6px;
-  font-size: 10px; font-weight: 600; letter-spacing: .1em;
-  text-transform: uppercase; color: rgba(255,255,255,.25);
-}
-.sidebar-footer {
-  margin-top: auto; padding: 16px 20px;
-  border-top: 1px solid rgba(255,255,255,.06);
-}
-.btn-logout {
-  display: flex; align-items: center; gap: 8px;
-  width: 100%; padding: 9px 12px; border-radius: 7px;
-  background: transparent; color: rgba(255,255,255,.4);
-  font-size: 13px; transition: all .15s;
-}
-.btn-logout:hover { background: rgba(239,68,68,.1); color: #FCA5A5; }
+/* ── PAGES ── */
+.page{display:none}
+.page.active{display:block;animation:fadeIn .2s ease}
 
-/* MAIN CONTENT */
-.main {
-  margin-left: var(--sidebar-w);
-  flex: 1; min-height: 100vh;
-  display: flex; flex-direction: column;
-}
-.topbar {
-  height: var(--header-h); background: var(--white);
-  border-bottom: 1px solid var(--gray-200);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 28px; position: sticky; top: 0; z-index: 50;
-}
-.topbar-title { font-size: 16px; font-weight: 600; color: var(--text); }
-.topbar-right { display: flex; align-items: center; gap: 12px; }
-.content { padding: 28px; flex: 1; }
+/* ── CARDS ── */
+.card{background:var(--white);border-radius:var(--radius);border:1px solid var(--gray-200);
+  box-shadow:var(--shadow);padding:22px 24px}
+.card-title{font-size:14px;font-weight:600;margin-bottom:16px}
+.card-sub{font-size:12px;color:var(--text-muted);margin-top:2px;font-weight:400}
 
-/* ── TABS ─────────────────────────────────────────────────────── */
-.page { display: none; }
-.page.active { display: block; animation: fadeIn .2s ease; }
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.stat-card{background:var(--white);border-radius:var(--radius);border:1px solid var(--gray-200);padding:18px 20px;box-shadow:var(--shadow)}
+.stat-label{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted);margin-bottom:7px}
+.stat-value{font-size:22px;font-weight:600;font-family:'DM Mono',monospace;letter-spacing:-.5px}
+.stat-value.green{color:var(--green)} .stat-value.red{color:var(--red)} .stat-value.blue{color:var(--accent)}
+.stat-sub{font-size:11px;color:var(--text-muted);margin-top:3px}
 
-/* ── CARDS ────────────────────────────────────────────────────── */
-.card {
-  background: var(--white); border-radius: var(--radius);
-  border: 1px solid var(--gray-200); box-shadow: var(--shadow);
-  padding: 22px 24px;
-}
-.card-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
-.card-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; font-weight: 400; }
+/* ── GRIDS ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+.grid-1-2{display:grid;grid-template-columns:1fr 2fr;gap:18px}
 
-/* ── STATS ROW ────────────────────────────────────────────────── */
-.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-.stat-card {
-  background: var(--white); border-radius: var(--radius);
-  border: 1px solid var(--gray-200); padding: 18px 20px;
-  box-shadow: var(--shadow);
-}
-.stat-label { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
-.stat-value { font-size: 24px; font-weight: 600; color: var(--text); font-family: 'DM Mono', monospace; letter-spacing: -.5px; }
-.stat-value.green { color: var(--green); }
-.stat-value.red { color: var(--red); }
-.stat-value.blue { color: var(--accent); }
-.stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+/* ── TABLES ── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--text-muted);padding:0 12px 10px;border-bottom:1px solid var(--gray-200)}
+.tbl td{padding:11px 12px;border-bottom:1px solid var(--gray-100);font-size:13.5px}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--gray-50)}
+.mono{font-family:'DM Mono',monospace;font-size:13px}
 
-/* ── GRID LAYOUTS ─────────────────────────────────────────────── */
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
-.grid-3-1 { display: grid; grid-template-columns: 3fr 1fr; gap: 20px; }
-.grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:rgba(16,185,129,.1);color:#059669}
+.badge-red{background:rgba(239,68,68,.1);color:#DC2626}
+.badge-blue{background:rgba(59,130,246,.1);color:#2563EB}
+.badge-amber{background:rgba(245,158,11,.1);color:#D97706}
+.badge-gray{background:var(--gray-100);color:var(--gray-600)}
 
-/* ── TABLES ───────────────────────────────────────────────────── */
-.tbl { width: 100%; border-collapse: collapse; }
-.tbl th {
-  text-align: left; font-size: 11px; font-weight: 600;
-  letter-spacing: .04em; text-transform: uppercase;
-  color: var(--text-muted); padding: 0 12px 10px;
-  border-bottom: 1px solid var(--gray-200);
-}
-.tbl td { padding: 12px; border-bottom: 1px solid var(--gray-100); font-size: 13.5px; }
-.tbl tr:last-child td { border-bottom: none; }
-.tbl tr:hover td { background: var(--gray-100); }
-.tbl .mono { font-family: 'DM Mono', monospace; font-size: 13px; }
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:7px;
+  font-size:13px;font-weight:500;transition:all .15s;cursor:pointer}
+.btn-blue{background:var(--accent);color:var(--white)} .btn-blue:hover{background:var(--accent-dim)}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--gray-200)} .btn-outline:hover{background:var(--gray-100)}
+.btn-danger{background:rgba(239,68,68,.08);color:var(--red);border:1px solid rgba(239,68,68,.2)} .btn-danger:hover{background:rgba(239,68,68,.15)}
+.btn-green{background:var(--green);color:var(--white)} .btn-green:hover{background:#059669}
+.btn-sm{padding:6px 12px;font-size:12px}
 
-/* ── BADGES ───────────────────────────────────────────────────── */
-.badge {
-  display: inline-flex; align-items: center;
-  padding: 3px 9px; border-radius: 20px;
-  font-size: 11px; font-weight: 600; letter-spacing: .02em;
-}
-.badge-green { background: rgba(16,185,129,.1); color: #059669; }
-.badge-red   { background: rgba(239,68,68,.1); color: #DC2626; }
-.badge-blue  { background: rgba(59,130,246,.1); color: #2563EB; }
-.badge-amber { background: rgba(245,158,11,.1); color: #D97706; }
-.badge-gray  { background: var(--gray-100); color: var(--gray-600); }
+/* ── FORMS ── */
+.form-row{display:grid;gap:14px;margin-bottom:14px}
+.form-row.cols-2{grid-template-columns:1fr 1fr}
+.form-row.cols-3{grid-template-columns:1fr 1fr 1fr}
+.form-group label{display:block;font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:5px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;
+  border:1px solid var(--gray-200);border-radius:7px;font-size:13.5px;color:var(--text);background:var(--white);transition:border-color .15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:70px}
 
-/* ── BUTTONS ──────────────────────────────────────────────────── */
-.btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 16px; border-radius: 7px;
-  font-size: 13px; font-weight: 500; transition: all .15s;
-}
-.btn-blue { background: var(--accent); color: var(--white); }
-.btn-blue:hover { background: var(--accent-dim); }
-.btn-outline { background: transparent; color: var(--text); border: 1px solid var(--gray-200); }
-.btn-outline:hover { background: var(--gray-100); }
-.btn-danger { background: rgba(239,68,68,.08); color: var(--red); border: 1px solid rgba(239,68,68,.2); }
-.btn-danger:hover { background: rgba(239,68,68,.15); }
-.btn-sm { padding: 6px 12px; font-size: 12px; }
-.btn-green { background: var(--green); color: var(--white); }
-.btn-green:hover { background: #059669; }
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;
+  align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.modal-overlay.open{display:flex;animation:fadeIn .15s ease}
+.modal{background:var(--white);border-radius:14px;padding:28px;width:520px;max-width:95vw;
+  max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:fadeUp .2s ease}
+.modal-lg{width:720px} .modal-xl{width:960px}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+.modal-title{font-size:17px;font-weight:600}
+.btn-close{background:var(--gray-100);border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--gray-600)}
+.btn-close:hover{background:var(--gray-200)}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;border-top:1px solid var(--gray-200);padding-top:18px}
 
-/* ── FORM ELEMENTS ────────────────────────────────────────────── */
-.form-row { display: grid; gap: 16px; margin-bottom: 16px; }
-.form-row.cols-2 { grid-template-columns: 1fr 1fr; }
-.form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
-.form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 5px; letter-spacing: .02em; }
-.form-group input, .form-group select, .form-group textarea {
-  width: 100%; padding: 9px 12px;
-  border: 1px solid var(--gray-200); border-radius: 7px;
-  font-size: 13.5px; color: var(--text); background: var(--white);
-  transition: border-color .15s;
-}
-.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
-.form-group textarea { resize: vertical; min-height: 80px; }
+/* ── TABS ── */
+.tab-bar{display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:7px 14px;border-radius:7px;font-size:12.5px;font-weight:500;background:var(--white);
+  color:var(--text-muted);border:1px solid var(--gray-200);cursor:pointer;transition:all .15s;white-space:nowrap}
+.tab:hover{border-color:var(--accent);color:var(--accent)}
+.tab.active{background:var(--accent);color:var(--white);border-color:var(--accent)}
 
-/* ── MODAL ────────────────────────────────────────────────────── */
-.modal-overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,.5); z-index: 200;
-  align-items: center; justify-content: center;
-  backdrop-filter: blur(2px);
-}
-.modal-overlay.open { display: flex; animation: fadeIn .15s ease; }
-.modal {
-  background: var(--white); border-radius: 14px;
-  padding: 28px; width: 500px; max-width: 95vw;
-  max-height: 90vh; overflow-y: auto;
-  box-shadow: var(--shadow-lg);
-  animation: fadeUp .2s ease;
-}
-.modal-lg { width: 700px; }
-.modal-xl { width: 900px; }
-.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
-.modal-title { font-size: 17px; font-weight: 600; }
-.btn-close { background: var(--gray-100); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--gray-600); transition: background .15s; }
-.btn-close:hover { background: var(--gray-200); }
-.modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; border-top: 1px solid var(--gray-200); padding-top: 20px; }
+/* ── MEMBER TABS ── */
+.member-tab-bar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.member-tab{display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:8px;
+  font-size:13px;font-weight:500;background:var(--white);color:var(--text-muted);
+  border:1px solid var(--gray-200);cursor:pointer;transition:all .15s}
+.member-tab:hover{border-color:var(--accent);color:var(--accent)}
+.member-tab.active{background:var(--navy);color:var(--white);border-color:var(--navy)}
+.member-avatar{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
 
-/* ── SECTION TABS (data entry) ────────────────────────────────── */
-.section-tabs { display: flex; gap: 4px; margin-bottom: 22px; flex-wrap: wrap; }
-.section-tab {
-  padding: 7px 14px; border-radius: 7px;
-  font-size: 12.5px; font-weight: 500;
-  background: var(--white); color: var(--text-muted);
-  border: 1px solid var(--gray-200); cursor: pointer;
-  transition: all .15s;
-}
-.section-tab:hover { border-color: var(--accent); color: var(--accent); }
-.section-tab.active { background: var(--accent); color: var(--white); border-color: var(--accent); }
-.section-tab.done::after { content: ' ✓'; font-size: 11px; }
+/* ── FAMILY CARD ── */
+.family-card{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius);
+  padding:18px 20px;box-shadow:var(--shadow);cursor:pointer;transition:all .2s;margin-bottom:10px}
+.family-card:hover{border-color:var(--accent);box-shadow:0 4px 20px rgba(59,130,246,.12);transform:translateY(-1px)}
+.family-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.family-card-name{font-size:15px;font-weight:600}
+.family-members-row{display:flex;gap:6px;flex-wrap:wrap}
+.member-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;
+  font-size:11.5px;font-weight:500;background:var(--gray-100);color:var(--text-muted)}
+.member-pill.primary{background:rgba(59,130,246,.08);color:var(--accent)}
 
-/* ── PROGRESS ─────────────────────────────────────────────────── */
-.progress-bar { height: 6px; background: var(--gray-200); border-radius: 3px; overflow: hidden; }
-.progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s ease; }
+/* ── ALLOC BARS ── */
+.alloc-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:13px}
+.alloc-label{width:130px;flex-shrink:0;color:var(--text-muted)}
+.alloc-bar-wrap{flex:1;height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden}
+.alloc-bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.alloc-pct{width:38px;text-align:right;font-weight:600;font-family:'DM Mono',monospace;font-size:12px}
+.alloc-amt{width:80px;text-align:right;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted)}
 
-/* ── PLAN OUTPUT ──────────────────────────────────────────────── */
-.plan-output {
-  font-size: 14px; line-height: 1.7; color: var(--text);
-  white-space: pre-wrap;
-  font-family: 'DM Sans', sans-serif;
-}
-.plan-output h2, .plan-output h3 { margin: 20px 0 8px; color: var(--navy); }
+/* ── INSIGHT ── */
+.insight{display:flex;gap:12px;padding:12px 14px;border-radius:9px;margin-bottom:8px}
+.insight-icon{font-size:16px;flex-shrink:0}
+.insight-text{font-size:13px;line-height:1.5}
+.insight-text strong{display:block;margin-bottom:1px;font-size:13px}
+.insight.green{background:rgba(16,185,129,.07)} .insight.red{background:rgba(239,68,68,.07)}
+.insight.amber{background:rgba(245,158,11,.07)} .insight.blue{background:rgba(59,130,246,.07)}
 
-/* ── HEALTH SCORE ─────────────────────────────────────────────── */
-.score-ring { position: relative; width: 120px; height: 120px; margin: 0 auto; }
-.score-ring svg { transform: rotate(-90deg); }
-.score-text {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-}
-.score-num { font-size: 28px; font-weight: 700; font-family: 'DM Mono', monospace; }
-.score-label { font-size: 10px; color: var(--text-muted); letter-spacing: .05em; text-transform: uppercase; }
+/* ── SECTION LABEL ── */
+.section-label{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px}
+.divider{height:1px;background:var(--gray-200);margin:18px 0}
 
-/* ── ALLOC BARS ───────────────────────────────────────────────── */
-.alloc-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
-.alloc-label { width: 130px; flex-shrink: 0; color: var(--text-muted); }
-.alloc-bar-wrap { flex: 1; height: 8px; background: var(--gray-200); border-radius: 4px; overflow: hidden; }
-.alloc-bar-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
-.alloc-pct { width: 38px; text-align: right; font-weight: 600; font-family: 'DM Mono', monospace; font-size: 12px; }
-.alloc-amt { width: 90px; text-align: right; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); }
+/* ── PLAN OUTPUT ── */
+.plan-output{font-size:14px;line-height:1.75;color:var(--text)}
+.plan-output h2{font-size:15px;font-weight:700;color:var(--navy);margin:22px 0 8px;
+  padding-bottom:6px;border-bottom:1px solid var(--gray-200)}
+.plan-output h3{font-size:13.5px;font-weight:600;color:var(--accent);margin:14px 0 5px}
+.plan-output strong{font-weight:600}
 
-/* ── EMPTY STATE ──────────────────────────────────────────────── */
-.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
-.empty-state .icon { font-size: 40px; margin-bottom: 14px; }
-.empty-state h3 { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
-.empty-state p { font-size: 13px; }
+/* ── SCORE RING ── */
+.score-ring{position:relative;width:110px;height:110px;margin:0 auto}
+.score-ring svg{transform:rotate(-90deg)}
+.score-text{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.score-num{font-size:26px;font-weight:700;font-family:'DM Mono',monospace}
+.score-lbl{font-size:10px;color:var(--text-muted);letter-spacing:.05em;text-transform:uppercase}
 
-/* ── TOAST ────────────────────────────────────────────────────── */
-#toast {
-  position: fixed; bottom: 24px; right: 24px; z-index: 999;
-  padding: 12px 18px; border-radius: 9px;
-  font-size: 13.5px; font-weight: 500; color: var(--white);
-  box-shadow: var(--shadow-lg);
-  transform: translateY(80px); opacity: 0;
-  transition: all .25s cubic-bezier(.34,1.56,.64,1);
-  pointer-events: none;
-}
-#toast.show { transform: translateY(0); opacity: 1; }
-#toast.success { background: var(--green); }
-#toast.error   { background: var(--red); }
-#toast.info    { background: var(--accent); }
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:50px 20px;color:var(--text-muted)}
+.empty .icon{font-size:36px;margin-bottom:12px}
+.empty h3{font-size:15px;font-weight:600;color:var(--text);margin-bottom:5px}
+.empty p{font-size:13px}
 
-/* ── CLIENT LIST ITEM ─────────────────────────────────────────── */
-.client-row { display: flex; align-items: center; padding: 13px 16px; border-radius: 8px; cursor: pointer; transition: background .15s; gap: 14px; }
-.client-row:hover { background: var(--gray-100); }
-.client-row.selected { background: rgba(59,130,246,.06); border: 1px solid rgba(59,130,246,.2); }
-.client-avatar {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: var(--navy-light); color: var(--white);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 600; flex-shrink: 0;
-}
-.client-info { flex: 1; min-width: 0; }
-.client-name { font-size: 13.5px; font-weight: 500; color: var(--text); }
-.client-email { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* ── TOAST ── */
+#toast{position:fixed;bottom:24px;right:24px;z-index:999;padding:12px 18px;border-radius:9px;
+  font-size:13.5px;font-weight:500;color:var(--white);box-shadow:var(--shadow-lg);
+  transform:translateY(80px);opacity:0;transition:all .25s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.success{background:var(--green)} #toast.error{background:var(--red)} #toast.info{background:var(--accent)}
 
-/* ── ANIMATIONS ───────────────────────────────────────────────── */
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes spin { to { transform: rotate(360deg); } }
-.spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.3); border-top-color: var(--white); border-radius: 50%; animation: spin .7s linear infinite; }
+/* ── CHART ── */
+.chart-wrap{position:relative;height:220px}
 
-/* ── LOADING OVERLAY ──────────────────────────────────────────── */
-.loading-overlay {
-  position: absolute; inset: 0; background: rgba(255,255,255,.8);
-  display: flex; align-items: center; justify-content: center;
-  border-radius: var(--radius); z-index: 10;
-}
-.loading-spinner { width: 28px; height: 28px; border: 3px solid var(--gray-200); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+/* ── HAMBURGER ── */
+.hamburger{display:none;flex-direction:column;justify-content:center;gap:5px;
+  width:36px;height:36px;padding:6px;background:transparent;border-radius:7px}
+.hamburger span{display:block;height:2px;background:var(--text);border-radius:2px}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;backdrop-filter:blur(2px)}
+.sidebar-overlay.open{display:block}
 
-/* ── DIVIDER ──────────────────────────────────────────────────── */
-.divider { height: 1px; background: var(--gray-200); margin: 20px 0; }
-.section-label { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px; }
+/* ── BOTTOM NAV ── */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--navy);
+  z-index:90;padding:8px 0 max(8px,env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.08)}
+.bottom-nav-items{display:flex;justify-content:space-around}
+.bnav-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 8px;
+  border-radius:8px;color:rgba(255,255,255,.45);font-size:10px;font-weight:500;
+  cursor:pointer;background:transparent;border:none;min-width:56px}
+.bnav-item svg{opacity:.6}
+.bnav-item.active{color:var(--accent)} .bnav-item.active svg{opacity:1}
 
-/* ── CHART WRAPPER ────────────────────────────────────────────── */
-.chart-wrap { position: relative; height: 220px; }
-.chart-wrap-sm { position: relative; height: 160px; }
+/* ── SPINNER ── */
+.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--white);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
-/* ── PLAN SECTION CARD ────────────────────────────────────────── */
-.plan-section { margin-bottom: 12px; border: 1px solid var(--gray-200); border-radius: 9px; overflow: hidden; }
-.plan-section-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 13px 16px; cursor: pointer; background: var(--gray-100);
-  font-size: 13.5px; font-weight: 600; color: var(--text);
-  transition: background .15s;
-}
-.plan-section-header:hover { background: var(--gray-200); }
-.plan-section-body { padding: 16px; display: none; font-size: 13.5px; line-height: 1.7; }
-.plan-section-body.open { display: block; }
-
-/* ── INSIGHT BOX ──────────────────────────────────────────────── */
-.insight { display: flex; gap: 12px; padding: 14px 16px; border-radius: 9px; margin-bottom: 10px; }
-.insight-icon { font-size: 18px; flex-shrink: 0; }
-.insight-text { font-size: 13px; line-height: 1.5; }
-.insight-text strong { display: block; margin-bottom: 2px; font-size: 13px; }
-.insight.green { background: rgba(16,185,129,.08); }
-.insight.red   { background: rgba(239,68,68,.08); }
-.insight.amber { background: rgba(245,158,11,.08); }
-.insight.blue  { background: rgba(59,130,246,.08); }
-
-/* ── MOBILE HAMBURGER ─────────────────────────────────────────── */
-.hamburger {
-  display: none; flex-direction: column; justify-content: center;
-  gap: 5px; width: 36px; height: 36px; padding: 6px;
-  background: transparent; border-radius: 7px; cursor: pointer;
-  transition: background .15s;
-}
-.hamburger:hover { background: var(--gray-100); }
-.hamburger span {
-  display: block; height: 2px; background: var(--text);
-  border-radius: 2px; transition: all .25s;
-}
-.sidebar-overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,.5); z-index: 99;
-  backdrop-filter: blur(2px);
-}
-.sidebar-overlay.open { display: block; }
-
-/* ── BOTTOM NAV (mobile client) ───────────────────────────────── */
-.bottom-nav {
-  display: none;
-  position: fixed; bottom: 0; left: 0; right: 0;
-  background: var(--navy); z-index: 90;
-  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
-  border-top: 1px solid rgba(255,255,255,.08);
-}
-.bottom-nav-items { display: flex; justify-content: space-around; }
-.bottom-nav-item {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  padding: 4px 12px; border-radius: 8px;
-  color: rgba(255,255,255,.45); font-size: 10px; font-weight: 500;
-  cursor: pointer; transition: color .15s; background: transparent; border: none;
-  min-width: 60px;
-}
-.bottom-nav-item svg { opacity: .6; }
-.bottom-nav-item.active { color: var(--accent); }
-.bottom-nav-item.active svg { opacity: 1; }
-
-/* ════════════════════════════════════════════════════════════════
-   RESPONSIVE BREAKPOINTS
-════════════════════════════════════════════════════════════════ */
-@media (max-width: 768px) {
-  /* ── LAYOUT ── */
-  .main { margin-left: 0; }
-  .content { padding: 16px; padding-bottom: 80px; } /* room for bottom nav */
-
-  /* ── SIDEBAR: slide-in drawer on mobile ── */
-  .sidebar {
-    transform: translateX(-100%);
-    transition: transform .25s cubic-bezier(.4,0,.2,1);
-    z-index: 100;
-    box-shadow: none;
-  }
-  .sidebar.open {
-    transform: translateX(0);
-    box-shadow: 4px 0 24px rgba(0,0,0,.3);
-  }
-
-  /* ── TOPBAR ── */
-  .hamburger { display: flex; }
-  .topbar { padding: 0 16px; }
-  .topbar-title { font-size: 15px; }
-
-  /* ── LOGIN ── */
-  .login-card { width: 100%; margin: 16px; padding: 32px 24px; }
-  .login-logo { font-size: 22px; }
-
-  /* ── STATS GRID: 2 cols on mobile ── */
-  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .stat-value { font-size: 19px; }
-
-  /* ── ALL 2/3 col grids → single col ── */
-  .grid-2, .grid-3, .grid-3-1, .grid-1-2 {
-    grid-template-columns: 1fr;
-  }
-
-  /* ── FORMS: always single col ── */
-  .form-row.cols-2,
-  .form-row.cols-3 { grid-template-columns: 1fr; }
-
-  /* ── MODALS: full screen on mobile ── */
-  .modal-overlay { align-items: flex-end; }
-  .modal, .modal-lg, .modal-xl {
-    width: 100%;
-    max-width: 100%;
-    border-radius: 20px 20px 0 0;
-    max-height: 92vh;
-    padding: 24px 20px;
-  }
-
-  /* ── SECTION TABS: horizontal scroll ── */
-  .section-tabs {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding-bottom: 4px;
-    gap: 6px;
-  }
-  .section-tabs::-webkit-scrollbar { display: none; }
-  .section-tab { flex-shrink: 0; white-space: nowrap; }
-
-  /* ── TABLES: scroll horizontally ── */
-  .card { overflow-x: auto; }
-  .tbl { min-width: 480px; }
-  /* but alloc bars and insight cards don't need it */
-  .alloc-row .tbl, #cl-alloc-bars { min-width: unset; }
-
-  /* ── HIDE desktop sidebar nav on mobile for clients ── */
-  #client-nav { display: none !important; }
-  .sidebar-footer { display: none; }
-
-  /* ── SHOW bottom nav for clients ── */
-  .bottom-nav.client-visible { display: block; }
-
-  /* ── TOPBAR actions: smaller ── */
-  .topbar-right .btn { padding: 6px 10px; font-size: 12px; }
-
-  /* ── DETAIL page back button row ── */
-  #page-client-detail > div:first-child { flex-direction: column; align-items: flex-start; gap: 10px; }
-
-  /* ── CHART heights: shorter on mobile ── */
-  .chart-wrap { height: 180px; }
-  .chart-wrap-sm { height: 140px; }
-
-  /* ── PLAN output ── */
-  .plan-output { font-size: 13px; }
-
-  /* ── Touch targets: minimum 44px ── */
-  .nav-item { padding: 12px 20px; min-height: 44px; }
-  .btn { min-height: 38px; }
-  .field input, .form-group input,
-  .form-group select, .form-group textarea { min-height: 44px; font-size: 16px; } /* 16px prevents iOS zoom */
-  .btn-primary { min-height: 48px; font-size: 15px; }
-}
-
-@media (max-width: 400px) {
-  .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .stat-value { font-size: 17px; }
-  .content { padding: 12px; padding-bottom: 80px; }
-  .card { padding: 16px; }
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .main{margin-left:0}
+  .content{padding:14px;padding-bottom:80px}
+  .hamburger{display:flex}
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.3)}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .grid-2,.grid-3,.grid-1-2{grid-template-columns:1fr}
+  .form-row.cols-2,.form-row.cols-3{grid-template-columns:1fr}
+  .modal-overlay{align-items:flex-end}
+  .modal,.modal-lg,.modal-xl{width:100%;max-width:100%;border-radius:20px 20px 0 0;max-height:92vh}
+  .tab-bar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+  .tab-bar::-webkit-scrollbar{display:none}
+  .tab{flex-shrink:0}
+  .bottom-nav.show{display:block}
+  #client-nav{display:none!important}
+  .sidebar-footer{display:none}
+  .form-group input,.form-group select,.form-group textarea{font-size:16px;min-height:44px}
+  .btn-primary{min-height:48px;font-size:15px}
+  .card{overflow-x:auto}
+  .tbl{min-width:460px}
 }
 </style>
 </head>
 <body>
-
-<!-- ══ TOAST ══════════════════════════════════════════════════════ -->
 <div id="toast"></div>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
-<!-- ══ LOGIN SCREEN ═══════════════════════════════════════════════ -->
+<!-- ══ LOGIN ══════════════════════════════════════════════════════ -->
 <div id="login-screen" class="screen active">
   <div class="login-card">
     <div class="login-logo">fleek<span>.</span>finance</div>
     <div class="login-sub">Financial planning platform</div>
-    <div class="field">
-      <label>Email / Username</label>
-      <input type="text" id="login-user" placeholder="Enter email or username" autocomplete="username">
-    </div>
-    <div class="field">
-      <label>Password</label>
-      <input type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password">
-    </div>
+    <div class="field"><label>Email / Username</label>
+      <input type="text" id="login-user" placeholder="Enter email or username" autocomplete="username"></div>
+    <div class="field"><label>Password</label>
+      <input type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password"></div>
     <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign in</button>
     <div class="login-error" id="login-error"></div>
   </div>
 </div>
 
-<!-- ══ APP SCREEN ═════════════════════════════════════════════════ -->
+<!-- ══ APP ════════════════════════════════════════════════════════ -->
 <div id="app-screen" class="screen">
-<!-- Sidebar overlay for mobile -->
-<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
-
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">fleek<span>.</span>finance</div>
-    <div class="sidebar-role-badge" id="sb-role">Advisor</div>
+    <div class="sidebar-role" id="sb-role">Advisor</div>
     <div class="sidebar-user" id="sb-user">Loading…</div>
 
-    <!-- Advisor nav -->
     <nav id="advisor-nav">
-      <div class="nav-section-label">Overview</div>
+      <div class="nav-label">Overview</div>
       <div class="nav-item active" onclick="showPage('dashboard')" data-page="dashboard">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         Dashboard
       </div>
-      <div class="nav-section-label">Clients</div>
-      <div class="nav-item" onclick="showPage('clients')" data-page="clients">
+      <div class="nav-label">Families</div>
+      <div class="nav-item" onclick="showPage('families')" data-page="families">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        All Clients
+        All Families
       </div>
-      <div class="nav-item" onclick="showPage('client-detail')" data-page="client-detail" id="nav-client-detail" style="display:none">
+      <div class="nav-item" id="nav-family-detail" style="display:none" onclick="showPage('family-detail')" data-page="family-detail">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-        <span id="nav-client-name">Client</span>
+        <span id="nav-family-name">Family</span>
       </div>
     </nav>
 
-    <!-- Client nav -->
     <nav id="client-nav" style="display:none">
-      <div class="nav-section-label">My Plan</div>
-      <div class="nav-item active" onclick="showPage('client-overview')" data-page="client-overview">
+      <div class="nav-label">My Family Plan</div>
+      <div class="nav-item active" onclick="showPage('cl-overview')" data-page="cl-overview">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         Overview
       </div>
-      <div class="nav-item" onclick="showPage('client-networth')" data-page="client-networth">
+      <div class="nav-item" onclick="showPage('cl-networth')" data-page="cl-networth">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
         Net Worth
       </div>
-      <div class="nav-item" onclick="showPage('client-cashflow')" data-page="client-cashflow">
+      <div class="nav-item" onclick="showPage('cl-cashflow')" data-page="cl-cashflow">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         Cash Flow
       </div>
-      <div class="nav-item" onclick="showPage('client-plan')" data-page="client-plan">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <div class="nav-item" onclick="showPage('cl-plan')" data-page="cl-plan">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         Financial Plan
       </div>
     </nav>
@@ -634,328 +349,306 @@ a { text-decoration: none; color: inherit; }
   <!-- MAIN -->
   <div class="main">
     <div class="topbar">
-      <div style="display:flex;align-items:center;gap:10px">
-        <button class="hamburger" id="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu"><span></span><span></span><span></span></button>
+      <div class="topbar-left">
+        <button class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
         <div class="topbar-title" id="topbar-title">Dashboard</div>
       </div>
-      <div class="topbar-right" id="topbar-actions"></div>
+      <div id="topbar-actions"></div>
     </div>
     <div class="content">
 
-      <!-- ══ ADVISOR: DASHBOARD ══════════════════════════════════ -->
+      <!-- ADVISOR: DASHBOARD -->
       <div class="page active" id="page-dashboard">
-        <div class="stats-grid" id="adv-stats">
-          <div class="stat-card"><div class="stat-label">Total Clients</div><div class="stat-value blue" id="stat-clients">—</div></div>
-          <div class="stat-card"><div class="stat-label">Plans Generated</div><div class="stat-value" id="stat-plans">—</div></div>
-          <div class="stat-card"><div class="stat-label">Data Complete</div><div class="stat-value green" id="stat-complete">—</div></div>
-          <div class="stat-card"><div class="stat-label">Pending Review</div><div class="stat-value amber" id="stat-pending">—</div></div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">Families</div><div class="stat-value blue" id="stat-families">—</div></div>
+          <div class="stat-card"><div class="stat-label">Total Members</div><div class="stat-value" id="stat-members">—</div></div>
+          <div class="stat-card"><div class="stat-label">Plans Generated</div><div class="stat-value green" id="stat-plans">—</div></div>
+          <div class="stat-card"><div class="stat-label">Pending Plan</div><div class="stat-value amber" id="stat-pending">—</div></div>
         </div>
-        <div class="grid-1-2" style="margin-bottom:20px;">
-          <div class="card">
-            <div class="card-title">Recent Clients</div>
-            <div id="recent-clients-list"></div>
-          </div>
+        <div class="grid-1-2">
           <div class="card">
             <div class="card-title">Quick Actions</div>
-            <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
-              <button class="btn btn-blue" onclick="openAddClient()">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <button class="btn btn-blue" onclick="openCreateFamily()">
                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Add New Client
+                Create Family
               </button>
-              <button class="btn btn-outline" onclick="showPage('clients')">View All Clients</button>
+              <button class="btn btn-outline" onclick="showPage('families')">View All Families</button>
             </div>
-            <div class="divider"></div>
-            <div class="section-label">About</div>
-            <p style="font-size:13px;color:var(--text-muted);line-height:1.6;">Fleek Finance helps you create comprehensive financial plans for your clients using AI-powered analysis and structured data collection.</p>
+          </div>
+          <div class="card">
+            <div class="card-title">Recent Families</div>
+            <div id="recent-families"></div>
           </div>
         </div>
       </div>
 
-      <!-- ══ ADVISOR: CLIENT LIST ════════════════════════════════ -->
-      <div class="page" id="page-clients">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-          <div>
-            <h2 style="font-size:18px;font-weight:600;">Clients</h2>
-            <p style="font-size:13px;color:var(--text-muted);margin-top:3px;" id="clients-count"></p>
-          </div>
-          <button class="btn btn-blue" onclick="openAddClient()">
+      <!-- ADVISOR: FAMILIES LIST -->
+      <div class="page" id="page-families">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <div><h2 style="font-size:18px;font-weight:600">Families</h2>
+            <p style="font-size:13px;color:var(--text-muted);margin-top:2px" id="families-count"></p></div>
+          <button class="btn btn-blue" onclick="openCreateFamily()">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Client
+            Create Family
           </button>
         </div>
-        <div class="card" style="padding:8px;">
-          <table class="tbl">
-            <thead><tr>
-              <th>Name</th><th>Email</th><th>Phone</th><th>Added</th><th>Actions</th>
-            </tr></thead>
-            <tbody id="clients-tbody"></tbody>
-          </table>
-        </div>
+        <div id="families-list"></div>
       </div>
 
-      <!-- ══ ADVISOR: CLIENT DETAIL ══════════════════════════════ -->
-      <div class="page" id="page-client-detail">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <!-- ADVISOR: FAMILY DETAIL -->
+      <div class="page" id="page-family-detail">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
           <div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-              <button class="btn btn-outline btn-sm" onclick="showPage('clients')">← Back</button>
-              <h2 style="font-size:18px;font-weight:600;" id="detail-client-name">Client</h2>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <button class="btn btn-outline btn-sm" onclick="showPage('families')">← Back</button>
+              <h2 style="font-size:18px;font-weight:600" id="detail-family-name">Family</h2>
             </div>
-            <p style="font-size:13px;color:var(--text-muted);" id="detail-client-email"></p>
+            <div id="detail-family-members-row" style="margin-top:4px"></div>
           </div>
-          <div style="display:flex;gap:10px;">
-            <button class="btn btn-green" id="btn-gen-plan" onclick="generatePlan()">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              Generate Plan
-            </button>
-          </div>
+          <button class="btn btn-green" id="btn-gen-plan" onclick="generatePlan()">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Generate Plan
+          </button>
         </div>
 
-        <!-- Data entry tabs -->
-        <div class="section-tabs" id="data-section-tabs">
-          <div class="section-tab active" onclick="switchDataSection('income_expenses')" data-section="income_expenses">Income & Expenses</div>
-          <div class="section-tab" onclick="switchDataSection('assets_liabilities')" data-section="assets_liabilities">Assets & Liabilities</div>
-          <div class="section-tab" onclick="switchDataSection('insurance')" data-section="insurance">Insurance</div>
-          <div class="section-tab" onclick="switchDataSection('investments')" data-section="investments">Investments</div>
-          <div class="section-tab" onclick="switchDataSection('goals')" data-section="goals">Goals</div>
-          <div class="section-tab" onclick="switchDataSection('risk_profile')" data-section="risk_profile">Risk Profile</div>
-          <div class="section-tab" onclick="switchDataSection('plan')" data-section="plan">📋 Plan</div>
+        <!-- Section tabs -->
+        <div class="tab-bar" id="detail-tabs">
+          <div class="tab active" onclick="switchFamilyTab('overview')" data-tab="overview">Overview</div>
+          <div class="tab" onclick="switchFamilyTab('income_expenses')" data-tab="income_expenses">Income & Expenses</div>
+          <div class="tab" onclick="switchFamilyTab('assets_liabilities')" data-tab="assets_liabilities">Assets & Liabilities</div>
+          <div class="tab" onclick="switchFamilyTab('insurance')" data-tab="insurance">Insurance</div>
+          <div class="tab" onclick="switchFamilyTab('goals')" data-tab="goals">Goals</div>
+          <div class="tab" onclick="switchFamilyTab('risk_profile')" data-tab="risk_profile">Risk Profile</div>
+          <div class="tab" onclick="switchFamilyTab('plan')" data-tab="plan">📋 Plan</div>
         </div>
 
-        <!-- Data sections -->
-        <div id="ds-income_expenses" class="data-section"></div>
-        <div id="ds-assets_liabilities" class="data-section" style="display:none"></div>
-        <div id="ds-insurance" class="data-section" style="display:none"></div>
-        <div id="ds-investments" class="data-section" style="display:none"></div>
-        <div id="ds-goals" class="data-section" style="display:none"></div>
-        <div id="ds-risk_profile" class="data-section" style="display:none"></div>
-        <div id="ds-plan" class="data-section" style="display:none"></div>
+        <div id="family-tab-content"></div>
       </div>
 
-      <!-- ══ CLIENT: OVERVIEW ════════════════════════════════════ -->
-      <div class="page" id="page-client-overview">
-        <div class="stats-grid" id="cl-stats-grid">
-          <div class="stat-card"><div class="stat-label">Net Worth</div><div class="stat-value blue" id="cl-networth">—</div><div class="stat-sub">Total assets − liabilities</div></div>
+      <!-- CLIENT: OVERVIEW -->
+      <div class="page" id="page-cl-overview">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">Family Net Worth</div><div class="stat-value blue" id="cl-networth">—</div><div class="stat-sub">Assets − liabilities</div></div>
           <div class="stat-card"><div class="stat-label">Monthly Surplus</div><div class="stat-value green" id="cl-surplus">—</div><div class="stat-sub">After all expenses</div></div>
-          <div class="stat-card"><div class="stat-label">Monthly EMI</div><div class="stat-value" id="cl-emi">—</div><div class="stat-sub">Total loan payments</div></div>
+          <div class="stat-card"><div class="stat-label">Total EMI</div><div class="stat-value" id="cl-emi">—</div><div class="stat-sub">Monthly loan payments</div></div>
           <div class="stat-card"><div class="stat-label">Savings Rate</div><div class="stat-value" id="cl-savrate">—</div><div class="stat-sub">SIP + savings / income</div></div>
         </div>
-        <div class="grid-2" style="margin-bottom:20px;" id="cl-overview-grid">
-          <div class="card">
-            <div class="card-title">Asset Allocation</div>
-            <div id="cl-alloc-bars"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">Financial Health</div>
-            <div id="cl-health"></div>
-          </div>
+        <div class="grid-2" style="margin-bottom:18px">
+          <div class="card"><div class="card-title">Asset Allocation</div><div id="cl-alloc"></div></div>
+          <div class="card"><div class="card-title">Family Health Score</div><div id="cl-health"></div></div>
         </div>
-        <div class="card" id="cl-insights-card">
-          <div class="card-title">Key Insights</div>
-          <div id="cl-insights"></div>
-        </div>
+        <div class="card"><div class="card-title">Key Insights</div><div id="cl-insights"></div></div>
       </div>
 
-      <!-- ══ CLIENT: NET WORTH ═══════════════════════════════════ -->
-      <div class="page" id="page-client-networth">
-        <div class="grid-2" style="margin-bottom:20px;">
-          <div class="card">
-            <div class="card-title">Assets Breakdown</div>
-            <div id="nw-assets-table"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">Liabilities Breakdown</div>
-            <div id="nw-liab-table"></div>
-          </div>
-        </div>
+      <!-- CLIENT: NET WORTH -->
+      <div class="page" id="page-cl-networth">
+        <div id="cl-nw-members" style="margin-bottom:18px"></div>
         <div class="card">
-          <div class="card-title">Asset Allocation Chart</div>
-          <div class="chart-wrap"><canvas id="nw-alloc-chart"></canvas></div>
+          <div class="card-title">Combined Asset Allocation</div>
+          <div class="chart-wrap"><canvas id="nw-chart"></canvas></div>
         </div>
       </div>
 
-      <!-- ══ CLIENT: CASH FLOW ══════════════════════════════════ -->
-      <div class="page" id="page-client-cashflow">
-        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);">
-          <div class="stat-card"><div class="stat-label">Monthly Income</div><div class="stat-value green" id="cf-income">—</div></div>
-          <div class="stat-card"><div class="stat-label">Monthly Expenses</div><div class="stat-value red" id="cf-expenses">—</div></div>
+      <!-- CLIENT: CASH FLOW -->
+      <div class="page" id="page-cl-cashflow">
+        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="stat-card"><div class="stat-label">Combined Income</div><div class="stat-value green" id="cf-income">—</div></div>
+          <div class="stat-card"><div class="stat-label">Combined Expenses</div><div class="stat-value red" id="cf-expenses">—</div></div>
           <div class="stat-card"><div class="stat-label">Surplus</div><div class="stat-value" id="cf-surplus">—</div></div>
         </div>
-        <div class="grid-2" style="margin-top:20px;">
-          <div class="card">
-            <div class="card-title">Expense Breakdown</div>
-            <div class="chart-wrap"><canvas id="cf-expense-chart"></canvas></div>
-          </div>
-          <div class="card">
-            <div class="card-title">Income vs Expenses</div>
-            <div id="cf-details"></div>
-          </div>
+        <div class="grid-2" style="margin-top:18px">
+          <div class="card"><div class="card-title">Expense Breakdown</div><div class="chart-wrap"><canvas id="cf-chart"></canvas></div></div>
+          <div class="card"><div class="card-title">Per Member</div><div id="cf-per-member"></div></div>
         </div>
       </div>
 
-      <!-- ══ CLIENT: FINANCIAL PLAN ═════════════════════════════ -->
-      <div class="page" id="page-client-plan">
+      <!-- CLIENT: PLAN -->
+      <div class="page" id="page-cl-plan">
         <div id="cl-plan-content">
-          <div class="empty-state">
-            <div class="icon">📋</div>
-            <h3>No plan generated yet</h3>
-            <p>Your advisor will generate a personalised financial plan once your data is complete.</p>
-          </div>
+          <div class="empty"><div class="icon">📋</div><h3>No plan yet</h3><p>Your advisor will generate a family financial plan once all data is in.</p></div>
         </div>
       </div>
 
     </div><!-- /content -->
   </div><!-- /main -->
-<!-- ══ BOTTOM NAV (mobile clients) ══════════════════════════════ -->
-<nav class="bottom-nav" id="bottom-nav">
-  <div class="bottom-nav-items">
-    <button class="bottom-nav-item active" onclick="showPage('client-overview');setBottomNav(this)" data-page="client-overview">
-      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-      Overview
-    </button>
-    <button class="bottom-nav-item" onclick="showPage('client-networth');setBottomNav(this)" data-page="client-networth">
-      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-      Net Worth
-    </button>
-    <button class="bottom-nav-item" onclick="showPage('client-cashflow');setBottomNav(this)" data-page="client-cashflow">
-      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-      Cash Flow
-    </button>
-    <button class="bottom-nav-item" onclick="showPage('client-plan');setBottomNav(this)" data-page="client-plan">
-      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      My Plan
-    </button>
-  </div>
-</nav>
+
+  <!-- BOTTOM NAV (mobile clients) -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <div class="bottom-nav-items">
+      <button class="bnav-item active" onclick="showPage('cl-overview');setBnav(this)">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Overview
+      </button>
+      <button class="bnav-item" onclick="showPage('cl-networth');setBnav(this)">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        Net Worth
+      </button>
+      <button class="bnav-item" onclick="showPage('cl-cashflow');setBnav(this)">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Cash Flow
+      </button>
+      <button class="bnav-item" onclick="showPage('cl-plan');setBnav(this)">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        My Plan
+      </button>
+    </div>
+  </nav>
 </div><!-- /app-screen -->
 
-<!-- ══ MODAL: ADD CLIENT ══════════════════════════════════════════ -->
-<div class="modal-overlay" id="modal-add-client">
-  <div class="modal">
+<!-- MODAL: CREATE FAMILY -->
+<div class="modal-overlay" id="modal-create-family">
+  <div class="modal modal-lg">
     <div class="modal-header">
-      <div class="modal-title">Add New Client</div>
-      <button class="btn-close" onclick="closeModal('modal-add-client')">×</button>
+      <div class="modal-title">Create Family</div>
+      <button class="btn-close" onclick="closeModal('modal-create-family')">×</button>
     </div>
-    <div class="form-row cols-2">
-      <div class="form-group"><label>Full Name *</label><input type="text" id="ac-name" placeholder="Harshal Patil"></div>
-      <div class="form-group"><label>Email *</label><input type="email" id="ac-email" placeholder="harshal@email.com"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Family Name *</label><input type="text" id="cf-name" placeholder="e.g. Patil Family"></div>
     </div>
-    <div class="form-row cols-2">
-      <div class="form-group"><label>Phone</label><input type="tel" id="ac-phone" placeholder="+91 9876543210"></div>
-      <div class="form-group"><label>Password *</label><input type="password" id="ac-pass" placeholder="Set login password"></div>
+    <div class="divider"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="section-label" style="margin:0">Members</div>
+      <button class="btn btn-outline btn-sm" onclick="addMemberRow()">+ Add Member</button>
     </div>
+    <div id="member-rows"></div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-add-client')">Cancel</button>
-      <button class="btn btn-blue" onclick="addClient()">Add Client</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-create-family')">Cancel</button>
+      <button class="btn btn-blue" onclick="submitCreateFamily()">Create Family</button>
     </div>
   </div>
 </div>
 
-<!-- ══ MODAL: DATA ENTRY ══════════════════════════════════════════ -->
-<div class="modal-overlay" id="modal-data-entry">
+<!-- MODAL: DATA ENTRY -->
+<div class="modal-overlay" id="modal-data">
   <div class="modal modal-lg">
     <div class="modal-header">
-      <div class="modal-title" id="de-modal-title">Edit Data</div>
-      <button class="btn-close" onclick="closeModal('modal-data-entry')">×</button>
+      <div class="modal-title" id="modal-data-title">Edit Data</div>
+      <button class="btn-close" onclick="closeModal('modal-data')">×</button>
     </div>
-    <div id="de-form-body"></div>
+    <div id="modal-data-body"></div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-data-entry')">Cancel</button>
-      <button class="btn btn-blue" onclick="saveDataSection()">Save</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-data')">Cancel</button>
+      <button class="btn btn-blue" onclick="submitDataModal()">Save</button>
     </div>
   </div>
 </div>
 
 <script>
 // ================================================================
-//  CONFIG
+//  CONFIG + STATE
 // ================================================================
-const API = (window.FLEEK_API_URL || 'https://financialplanning-production-6bf6.up.railway.app').replace(/\/$/, '');
-
-let auth = { token: null, role: null, name: null, clientId: null };
-let allClients = [];
-let currentClientId = null;
-let currentClientData = {};
-let currentDataSection = 'income_expenses';
-let charts = {};
-let allocChart = null;
-let expenseChart = null;
+const API = 'https://financialplanning-production-6bf6.up.railway.app';
+let auth = {};
+let allFamilies = [];
+let currentFamilyId = null;
+let currentFamilyData = {};
+let currentFamilyTab = 'overview';
+let currentDataModal = { section: null, memberId: null, isFamily: false };
+let nwChart = null, cfChart = null;
 
 // ================================================================
 //  UTILITIES
 // ================================================================
-const fmt = n => '₹' + Number(n || 0).toLocaleString('en-IN');
-const fmtL = n => { const v = Number(n||0); if(v>=10000000) return '₹'+(v/10000000).toFixed(2)+' Cr'; if(v>=100000) return '₹'+(v/100000).toFixed(2)+' L'; return fmt(v); };
-const pct = (a,b) => b ? ((a/b)*100).toFixed(1)+'%' : '0%';
-const initials = name => name ? name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
+const fmt  = n => '₹' + Number(n||0).toLocaleString('en-IN');
+const fmtL = n => { const v=Number(n||0); if(v>=10000000) return '₹'+(v/10000000).toFixed(2)+' Cr'; if(v>=100000) return '₹'+(v/100000).toFixed(2)+' L'; return fmt(v); };
+const pct  = (a,b) => b ? ((a/b)*100).toFixed(1)+'%' : '0%';
+const inits = name => name ? name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
+const COLORS = ['#3B82F6','#F59E0B','#10B981','#6366F1','#8B5CF6','#EF4444','#F97316','#14B8A6','#6B7280'];
+const AVATAR_COLORS = ['#1E40AF','#047857','#7C3AED','#B45309','#0F766E','#BE123C'];
+const avatarColor = name => { let h=0; for(let c of(name||'')) h=(h<<5)-h+c.charCodeAt(0); return AVATAR_COLORS[Math.abs(h)%AVATAR_COLORS.length]; };
 
 function toast(msg, type='info') {
   const t = document.getElementById('toast');
-  t.textContent = msg; t.className = 'show ' + type;
-  clearTimeout(t._to);
-  t._to = setTimeout(() => { t.className = ''; }, 3000);
+  t.textContent = msg; t.className = 'show '+type;
+  clearTimeout(t._to); t._to = setTimeout(() => t.className='', 3200);
 }
 
 async function api(path, opts={}) {
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = {'Content-Type':'application/json'};
   if (auth.token) headers['X-Auth-Token'] = auth.token;
-  const res = await fetch(API + path, { headers, ...opts, body: opts.body ? JSON.stringify(opts.body) : undefined });
-  if (res.status === 401) { doLogout(); return null; }
-  return res.json();
+  try {
+    const res = await fetch(API+path, {...opts, headers,
+      body: opts.body ? JSON.stringify(opts.body) : undefined});
+    if (res.status === 401) { doLogout(); return null; }
+    return res.json();
+  } catch(e) {
+    toast('Network error — check connection','error'); return null;
+  }
 }
 
 function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
 
 function showPage(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-' + id)?.classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => {
-    n.classList.toggle('active', n.dataset.page === id);
-  });
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id)?.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.page===id));
   const titles = {
-    'dashboard': 'Dashboard', 'clients': 'Clients',
-    'client-detail': currentClientData?.client?.name || 'Client Detail',
-    'client-overview': 'Overview', 'client-networth': 'Net Worth',
-    'client-cashflow': 'Cash Flow', 'client-plan': 'Financial Plan'
+    'dashboard':'Dashboard','families':'Families',
+    'family-detail': document.getElementById('detail-family-name')?.textContent || 'Family',
+    'cl-overview':'Overview','cl-networth':'Net Worth','cl-cashflow':'Cash Flow','cl-plan':'Financial Plan'
   };
   document.getElementById('topbar-title').textContent = titles[id] || id;
-  document.getElementById('topbar-actions').innerHTML = '';
+  if (window.innerWidth <= 768) closeSidebar();
 }
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar'), ov = document.getElementById('sidebar-overlay');
+  const open = sb.classList.toggle('open');
+  ov.classList.toggle('open', open);
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function setBnav(el) {
+  document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function formatPlan(text) {
+  if (!text) return '';
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^#{1,2} (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+}
 
 // ================================================================
 //  AUTH
 // ================================================================
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.getElementById('login-user').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
 async function doLogin() {
   const user = document.getElementById('login-user').value.trim();
   const pass = document.getElementById('login-pass').value;
   const btn  = document.getElementById('login-btn');
   const err  = document.getElementById('login-error');
-  if (!user || !pass) { err.textContent = 'Please enter credentials'; err.classList.add('show'); return; }
-  btn.disabled = true; btn.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;gap:8px"><div class="spinner"></div> Signing in…</div>';
-  const res = await api('/api/login', { method: 'POST', body: { username: user, password: pass } });
-  btn.disabled = false; btn.textContent = 'Sign in';
-  if (!res || res.error) { err.textContent = res?.error || 'Login failed'; err.classList.add('show'); return; }
+  if (!user||!pass) { err.textContent='Please enter credentials'; err.classList.add('show'); return; }
+  btn.disabled=true; btn.innerHTML='<div style="display:flex;align-items:center;justify-content:center;gap:8px"><div class="spinner"></div>Signing in…</div>';
+  const res = await api('/api/login', {method:'POST', body:{username:user,password:pass}});
+  btn.disabled=false; btn.textContent='Sign in';
+  if (!res||res.error) { err.textContent=res?.error||'Login failed'; err.classList.add('show'); return; }
   err.classList.remove('show');
-  auth = { token: res.token, role: res.role, name: res.name, clientId: res.client_id || null };
+  auth = {token:res.token, role:res.role, name:res.name,
+          familyId:res.family_id||null, memberId:res.member_id||null};
   localStorage.setItem('fleek_auth', JSON.stringify(auth));
   initApp();
 }
 
-document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
-document.getElementById('login-user').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
-
 async function doLogout() {
-  await api('/api/logout', { method: 'POST' });
+  await api('/api/logout', {method:'POST'});
   auth = {}; localStorage.removeItem('fleek_auth');
   showScreen('login-screen');
-  document.getElementById('login-user').value = '';
-  document.getElementById('login-pass').value = '';
 }
 
 function initApp() {
@@ -964,435 +657,499 @@ function initApp() {
     document.getElementById('sb-role').textContent = 'Advisor';
     document.getElementById('advisor-nav').style.display = '';
     document.getElementById('client-nav').style.display = 'none';
-    showScreen('app-screen');
-    showPage('dashboard');
+    document.getElementById('bottom-nav').classList.remove('show');
+    showScreen('app-screen'); showPage('dashboard');
     loadAdvisorDashboard();
   } else {
-    document.getElementById('sb-role').textContent = 'Client';
+    document.getElementById('sb-role').textContent = 'Member';
     document.getElementById('advisor-nav').style.display = 'none';
     document.getElementById('client-nav').style.display = '';
-    showScreen('app-screen');
-    showPage('client-overview');
-    loadClientData(auth.clientId);
+    document.getElementById('bottom-nav').classList.add('show');
+    showScreen('app-screen'); showPage('cl-overview');
+    loadClientView();
   }
 }
 
-// ── AUTO-LOGIN ───────────────────────────────────────────────────
+// Auto-login
 (function() {
   const saved = localStorage.getItem('fleek_auth');
-  if (saved) { try { auth = JSON.parse(saved); if (auth.token) { initApp(); return; } } catch(e) {} }
+  if (saved) { try { auth=JSON.parse(saved); if(auth.token){initApp();return;} } catch(e){} }
 })();
 
 // ================================================================
-//  ADVISOR: DASHBOARD
+//  ADVISOR DASHBOARD
 // ================================================================
 async function loadAdvisorDashboard() {
-  const clients = await api('/api/clients');
-  if (!clients) return;
-  allClients = clients;
-  document.getElementById('stat-clients').textContent = clients.length;
-  document.getElementById('stat-plans').textContent = '—';
-  document.getElementById('stat-complete').textContent = '—';
-  document.getElementById('stat-pending').textContent = clients.length;
-  document.getElementById('clients-count').textContent = clients.length + ' client' + (clients.length!==1?'s':'');
+  const families = await api('/api/families');
+  if (!families) return;
+  allFamilies = families;
 
-  // Recent clients list
-  const recent = clients.slice(-5).reverse();
-  const rl = document.getElementById('recent-clients-list');
-  if (!recent.length) { rl.innerHTML = '<div class="empty-state" style="padding:30px"><div class="icon">👤</div><h3>No clients yet</h3><p>Add your first client to get started</p></div>'; }
-  else rl.innerHTML = recent.map(c => `
-    <div class="client-row" onclick="openClientDetail('${c.id}','${c.name}','${c.email}')">
-      <div class="client-avatar" style="background:${avatarColor(c.name)}">${initials(c.name)}</div>
-      <div class="client-info">
-        <div class="client-name">${c.name}</div>
-        <div class="client-email">${c.email}</div>
+  const totalMembers = families.reduce((s,f)=>s+f.member_count,0);
+  const withPlan     = families.filter(f=>f.has_plan).length;
+  const noPlan       = families.filter(f=>!f.has_plan).length;
+
+  document.getElementById('stat-families').textContent = families.length;
+  document.getElementById('stat-members').textContent  = totalMembers;
+  document.getElementById('stat-plans').textContent    = withPlan;
+  document.getElementById('stat-pending').textContent  = noPlan;
+  document.getElementById('families-count').textContent = `${families.length} famil${families.length!==1?'ies':'y'}`;
+
+  // Recent families
+  const rf = document.getElementById('recent-families');
+  if (!families.length) {
+    rf.innerHTML = '<div class="empty" style="padding:30px"><div class="icon">👨‍👩‍👧</div><h3>No families yet</h3><p>Create your first family to get started</p></div>';
+  } else {
+    rf.innerHTML = families.slice(-4).reverse().map(f => `
+      <div class="family-card" onclick="openFamilyDetail('${f.id}')">
+        <div class="family-card-header">
+          <div class="family-card-name">${f.name}</div>
+          <span class="badge ${f.has_plan?'badge-green':'badge-amber'}">${f.has_plan?'Plan ready':'No plan'}</span>
+        </div>
+        <div class="family-members-row">
+          ${f.members.map(m=>`<div class="member-pill ${m.role==='primary'?'primary':''}">${inits(m.name)} ${m.name.split(' ')[0]}</div>`).join('')}
+        </div>
+      </div>`).join('');
+  }
+
+  // Families list page
+  renderFamiliesList(families);
+}
+
+function renderFamiliesList(families) {
+  const el = document.getElementById('families-list');
+  if (!families.length) {
+    el.innerHTML = '<div class="empty"><div class="icon">👨‍👩‍👧</div><h3>No families yet</h3><p>Click "Create Family" to add your first client family.</p></div>';
+    return;
+  }
+  el.innerHTML = families.map(f => `
+    <div class="family-card" onclick="openFamilyDetail('${f.id}')">
+      <div class="family-card-header">
+        <div>
+          <div class="family-card-name">${f.name}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${f.member_count} member${f.member_count!==1?'s':''} · Added ${f.created_at?.split(' ')[0]||'—'}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge ${f.has_plan?'badge-green':'badge-amber'}">${f.has_plan?'Plan ready':'No plan'}</span>
+          <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteFamily('${f.id}','${f.name}')">Delete</button>
+        </div>
       </div>
-      <svg width="14" height="14" fill="none" stroke="#9CA3AF" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      <div class="family-members-row">
+        ${f.members.map(m=>`
+          <div class="member-pill ${m.role==='primary'?'primary':''}">
+            <div class="member-avatar" style="background:${avatarColor(m.name)};width:18px;height:18px;font-size:8px;color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center">${inits(m.name)}</div>
+            ${m.name.split(' ')[0]} ${m.role==='primary'?'(Primary)':''}
+          </div>`).join('')}
+      </div>
     </div>`).join('');
-
-  // Full table
-  const tbody = document.getElementById('clients-tbody');
-  tbody.innerHTML = clients.map(c => `
-    <tr>
-      <td>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="client-avatar" style="background:${avatarColor(c.name)};width:30px;height:30px;font-size:11px">${initials(c.name)}</div>
-          <span style="font-weight:500">${c.name}</span>
-        </div>
-      </td>
-      <td>${c.email}</td>
-      <td>${c.phone || '—'}</td>
-      <td>${c.created_at ? c.created_at.split(' ')[0] : '—'}</td>
-      <td>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-outline btn-sm" onclick="openClientDetail('${c.id}','${c.name}','${c.email}')">View</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteClient('${c.id}','${c.name}')">Delete</button>
-        </div>
-      </td>
-    </tr>`).join('');
 }
 
-function avatarColor(name) {
-  const colors = ['#1E40AF','#047857','#7C3AED','#B45309','#0F766E','#BE123C','#1D4ED8','#065F46'];
-  let h = 0; for(let c of (name||'')) h = (h<<5)-h+c.charCodeAt(0); return colors[Math.abs(h)%colors.length];
-}
-
-// ================================================================
-//  ADVISOR: ADD/DELETE CLIENT
-// ================================================================
-function openAddClient() { openModal('modal-add-client'); }
-
-async function addClient() {
-  const name  = document.getElementById('ac-name').value.trim();
-  const email = document.getElementById('ac-email').value.trim();
-  const phone = document.getElementById('ac-phone').value.trim();
-  const pass  = document.getElementById('ac-pass').value;
-  if (!name||!email||!pass) { toast('Name, email and password required','error'); return; }
-  const res = await api('/api/clients', { method:'POST', body:{name,email,phone,password:pass} });
-  if (res?.status==='success') {
-    toast(res.message,'success'); closeModal('modal-add-client');
-    document.getElementById('ac-name').value=''; document.getElementById('ac-email').value='';
-    document.getElementById('ac-phone').value=''; document.getElementById('ac-pass').value='';
-    loadAdvisorDashboard();
-  } else { toast(res?.error||'Failed to add client','error'); }
-}
-
-async function deleteClient(id, name) {
-  if (!confirm(`Delete ${name}? This will remove all their data.`)) return;
-  const res = await api(`/api/clients/${id}`, { method:'DELETE' });
-  if (res?.status==='success') { toast('Client deleted','success'); loadAdvisorDashboard(); }
+async function deleteFamily(id, name) {
+  if (!confirm(`Delete ${name} family? This removes all their data.`)) return;
+  const res = await api(`/api/families/${id}`, {method:'DELETE'});
+  if (res?.status==='success') { toast('Family deleted','success'); loadAdvisorDashboard(); }
   else toast(res?.error||'Failed','error');
 }
 
 // ================================================================
-//  ADVISOR: CLIENT DETAIL
+//  CREATE FAMILY MODAL
 // ================================================================
-async function openClientDetail(id, name, email) {
-  currentClientId = id;
-  document.getElementById('detail-client-name').textContent = name;
-  document.getElementById('detail-client-email').textContent = email;
-  document.getElementById('nav-client-detail').style.display = '';
-  document.getElementById('nav-client-name').textContent = name.split(' ')[0];
-  showPage('client-detail');
-  // reset sections
-  document.querySelectorAll('.data-section').forEach(d => d.style.display='none');
-  document.getElementById('ds-income_expenses').style.display='';
-  document.querySelectorAll('.section-tab').forEach(t => t.classList.toggle('active', t.dataset.section==='income_expenses'));
-  currentDataSection = 'income_expenses';
-  await loadClientDataForAdvisor(id);
+let memberRowCount = 0;
+
+function openCreateFamily() {
+  memberRowCount = 0;
+  document.getElementById('cf-name').value = '';
+  document.getElementById('member-rows').innerHTML = '';
+  addMemberRow('primary'); // first member is always primary
+  openModal('modal-create-family');
 }
 
-async function loadClientDataForAdvisor(id) {
-  const data = await api(`/api/clients/${id}/data`);
-  if (!data) return;
-  currentClientData = data;
-  renderDataSection('income_expenses');
+function addMemberRow(role='member') {
+  const i = memberRowCount++;
+  const div = document.createElement('div');
+  div.id = `mr-${i}`;
+  div.style.cssText = 'background:var(--gray-50);border:1px solid var(--gray-200);border-radius:9px;padding:14px 16px;margin-bottom:10px';
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:600;color:var(--text-muted)">${role==='primary'?'👑 Primary Member':'Member'}</div>
+      ${role!=='primary'?`<button class="btn btn-danger btn-sm" onclick="document.getElementById('mr-${i}').remove()">Remove</button>`:''}
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group"><label>Full Name *</label><input type="text" id="mr-name-${i}" placeholder="Harshal Patil"></div>
+      <div class="form-group"><label>Email *</label><input type="email" id="mr-email-${i}" placeholder="harshal@email.com"></div>
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group"><label>Phone</label><input type="tel" id="mr-phone-${i}" placeholder="+91 9876543210"></div>
+      <div class="form-group"><label>Password *</label><input type="password" id="mr-pass-${i}" placeholder="Set login password"></div>
+    </div>
+    <input type="hidden" id="mr-role-${i}" value="${role}">`;
+  document.getElementById('member-rows').appendChild(div);
 }
 
-function switchDataSection(section) {
-  currentDataSection = section;
-  document.querySelectorAll('.data-section').forEach(d => d.style.display='none');
-  document.getElementById('ds-' + section).style.display='';
-  document.querySelectorAll('.section-tab').forEach(t => t.classList.toggle('active', t.dataset.section===section));
-  renderDataSection(section);
+async function submitCreateFamily() {
+  const name = document.getElementById('cf-name').value.trim();
+  if (!name) { toast('Family name required','error'); return; }
+
+  const members = [];
+  document.querySelectorAll('[id^="mr-name-"]').forEach(el => {
+    const i = el.id.replace('mr-name-','');
+    const n = el.value.trim();
+    const e = document.getElementById(`mr-email-${i}`)?.value.trim();
+    const p = document.getElementById(`mr-pass-${i}`)?.value;
+    const ph= document.getElementById(`mr-phone-${i}`)?.value.trim();
+    const r = document.getElementById(`mr-role-${i}`)?.value;
+    if (n && e && p) members.push({name:n,email:e,phone:ph,password:p,role:r});
+  });
+
+  if (!members.length) { toast('At least one member required','error'); return; }
+
+  const res = await api('/api/families', {method:'POST', body:{name, members}});
+  if (res?.status==='success') {
+    toast(res.message,'success');
+    closeModal('modal-create-family');
+    loadAdvisorDashboard();
+  } else toast(res?.error||'Failed','error');
 }
 
-function renderDataSection(section) {
-  const el = document.getElementById('ds-' + section);
-  const d  = currentClientData[section] || {};
+// ================================================================
+//  FAMILY DETAIL
+// ================================================================
+async function openFamilyDetail(familyId) {
+  currentFamilyId = familyId;
+  document.getElementById('nav-family-detail').style.display = '';
+  showPage('family-detail');
 
-  if (section === 'plan') { renderPlanSection(el); return; }
+  const [family, data, plan] = await Promise.all([
+    api(`/api/families/${familyId}`),
+    api(`/api/families/${familyId}/data`),
+    api(`/api/families/${familyId}/plan`)
+  ]);
 
-  const forms = {
-    income_expenses: renderIncomeExpensesForm,
-    assets_liabilities: renderAssetsLiabForm,
-    insurance: renderInsuranceForm,
-    investments: renderInvestmentsForm,
-    goals: renderGoalsForm,
-    risk_profile: renderRiskForm,
-  };
+  if (!family) return;
 
-  if (forms[section]) el.innerHTML = forms[section](d);
+  document.getElementById('detail-family-name').textContent = family.name;
+  document.getElementById('nav-family-name').textContent = family.name.split(' ')[0];
+
+  // Members row
+  document.getElementById('detail-family-members-row').innerHTML =
+    family.members.map(m=>`<span class="member-pill ${m.role==='primary'?'primary':''}" style="margin-right:6px">
+      <div style="width:18px;height:18px;border-radius:50%;background:${avatarColor(m.name)};color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">${inits(m.name)}</div>
+      ${m.name}
+    </span>`).join('');
+
+  currentFamilyData = {...(data||{}), _family: family, _plan: plan?.plan ? plan : null};
+  switchFamilyTab('overview');
 }
 
-// ── INCOME & EXPENSES FORM ───────────────────────────────────────
-function renderIncomeExpensesForm(d) {
-  const ie = d;
-  return `
-  <div class="card" style="margin-bottom:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div class="card-title" style="margin:0">Income & Expenses</div>
-      <button class="btn btn-blue btn-sm" onclick="openDataEntry('income_expenses')">Edit</button>
+function switchFamilyTab(tab) {
+  currentFamilyTab = tab;
+  document.querySelectorAll('#detail-tabs .tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
+  renderFamilyTab(tab);
+}
+
+function renderFamilyTab(tab) {
+  const el = document.getElementById('family-tab-content');
+  const data = currentFamilyData;
+  const members = data.members || [];
+  const memberData = data.member_data || {};
+  const familyData = data.family_data || {};
+
+  if (tab === 'overview') { renderAdvisorOverview(el, members, memberData, familyData); return; }
+  if (tab === 'plan')     { renderAdvisorPlan(el); return; }
+  if (tab === 'goals')    { renderFamilySection(el, 'goals', familyData.goals||{}, null, true); return; }
+
+  // Per-member section
+  renderMemberSection(el, tab, members, memberData);
+}
+
+function renderAdvisorOverview(el, members, memberData, familyData) {
+  // Compute combined numbers
+  let tIncome=0, tExp=0, tAssets=0, tLiab=0;
+  members.forEach(m => {
+    const d = memberData[m.id] || {};
+    const ie = d.income_expenses || {};
+    const al = d.assets_liabilities || {};
+    tIncome  += ['primary_income','secondary_income','rental_income','other_income'].reduce((s,k)=>s+(ie[k]||0),0);
+    tExp     += ['emi','rent','sip','savings','household','transport','lifestyle','insurance_premium','other_expenses'].reduce((s,k)=>s+(ie[k]||0),0);
+    tAssets  += ['real_estate','gold','equity','debt_instruments','epf_ppf','cash','vehicles','other_assets'].reduce((s,k)=>s+(al[k]||0),0);
+    tLiab    += ['home_loan','car_loan','personal_loan','credit_card','other_loans'].reduce((s,k)=>s+(al[k]||0),0);
+  });
+
+  el.innerHTML = `
+    <div class="stats-grid" style="margin-bottom:18px">
+      <div class="stat-card"><div class="stat-label">Combined Income</div><div class="stat-value green">${fmtL(tIncome)}</div><div class="stat-sub">Monthly</div></div>
+      <div class="stat-card"><div class="stat-label">Monthly Surplus</div><div class="stat-value ${tIncome-tExp>=0?'green':'red'}">${fmtL(tIncome-tExp)}</div></div>
+      <div class="stat-card"><div class="stat-label">Family Net Worth</div><div class="stat-value blue">${fmtL(tAssets-tLiab)}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Liabilities</div><div class="stat-value red">${fmtL(tLiab)}</div></div>
     </div>
     <div class="grid-2">
-      <div>
-        <div class="section-label">Income (Monthly)</div>
-        <table class="tbl">
-          <tr><td>Primary income</td><td class="mono" style="text-align:right">${fmtL(ie.primary_income||0)}</td></tr>
-          <tr><td>Secondary income</td><td class="mono" style="text-align:right">${fmtL(ie.secondary_income||0)}</td></tr>
-          <tr><td>Rental income</td><td class="mono" style="text-align:right">${fmtL(ie.rental_income||0)}</td></tr>
-          <tr><td>Other income</td><td class="mono" style="text-align:right">${fmtL(ie.other_income||0)}</td></tr>
-          <tr style="font-weight:600"><td>Total</td><td class="mono" style="text-align:right;color:var(--green)">${fmtL((ie.primary_income||0)+(ie.secondary_income||0)+(ie.rental_income||0)+(ie.other_income||0))}</td></tr>
-        </table>
+      <div class="card">
+        <div class="card-title">Members Summary</div>
+        ${members.map(m => {
+          const d = memberData[m.id] || {};
+          const ie = d.income_expenses || {};
+          const income = ['primary_income','secondary_income','rental_income','other_income'].reduce((s,k)=>s+(ie[k]||0),0);
+          const filled = Object.keys(d).filter(k=>k!=='name').length;
+          return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--gray-100)">
+            <div class="member-avatar" style="width:36px;height:36px;border-radius:50%;background:${avatarColor(m.name)};color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${inits(m.name)}</div>
+            <div style="flex:1">
+              <div style="font-weight:500">${m.name} ${m.role==='primary'?'<span class="badge badge-blue" style="font-size:10px">Primary</span>':''}</div>
+              <div style="font-size:12px;color:var(--text-muted)">${income?fmtL(income)+'/mo':'No income data'} · ${filled} section${filled!==1?'s':''} filled</div>
+            </div>
+            <span class="badge ${filled>=3?'badge-green':filled>0?'badge-amber':'badge-gray'}">${filled>=3?'Complete':filled>0?'Partial':'Empty'}</span>
+          </div>`;
+        }).join('')}
       </div>
-      <div>
-        <div class="section-label">Expenses (Monthly)</div>
-        <table class="tbl">
-          <tr><td>EMI / Loan payments</td><td class="mono" style="text-align:right">${fmtL(ie.emi||0)}</td></tr>
-          <tr><td>Rent</td><td class="mono" style="text-align:right">${fmtL(ie.rent||0)}</td></tr>
-          <tr><td>SIP / Investments</td><td class="mono" style="text-align:right">${fmtL(ie.sip||0)}</td></tr>
-          <tr><td>Savings</td><td class="mono" style="text-align:right">${fmtL(ie.savings||0)}</td></tr>
-          <tr><td>Household expenses</td><td class="mono" style="text-align:right">${fmtL(ie.household||0)}</td></tr>
-          <tr><td>Transport</td><td class="mono" style="text-align:right">${fmtL(ie.transport||0)}</td></tr>
-          <tr><td>Lifestyle / discretionary</td><td class="mono" style="text-align:right">${fmtL(ie.lifestyle||0)}</td></tr>
-          <tr><td>Insurance premiums</td><td class="mono" style="text-align:right">${fmtL(ie.insurance_premium||0)}</td></tr>
-          <tr><td>Other expenses</td><td class="mono" style="text-align:right">${fmtL(ie.other_expenses||0)}</td></tr>
-          <tr style="font-weight:600"><td>Total</td><td class="mono" style="text-align:right;color:var(--red)">${fmtL((ie.emi||0)+(ie.rent||0)+(ie.sip||0)+(ie.savings||0)+(ie.household||0)+(ie.transport||0)+(ie.lifestyle||0)+(ie.insurance_premium||0)+(ie.other_expenses||0))}</td></tr>
-        </table>
+      <div class="card">
+        <div class="card-title">Data Completion</div>
+        ${['income_expenses','assets_liabilities','insurance','risk_profile'].map(s => {
+          const filled = members.filter(m => memberData[m.id]?.[s]).length;
+          return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100);font-size:13px">
+            <span>${{income_expenses:'Income & Expenses',assets_liabilities:'Assets & Liabilities',insurance:'Insurance',risk_profile:'Risk Profile'}[s]}</span>
+            <span class="badge ${filled===members.length?'badge-green':filled>0?'badge-amber':'badge-gray'}">${filled}/${members.length}</span>
+          </div>`;
+        }).join('')}
+        <div style="margin-top:14px">
+          <div class="btn btn-blue btn-sm" onclick="generatePlan()" style="display:inline-flex">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Generate Plan
+          </div>
+        </div>
       </div>
+    </div>`;
+}
+
+function renderMemberSection(el, section, members, memberData) {
+  const labels = {income_expenses:'Income & Expenses',assets_liabilities:'Assets & Liabilities',
+                  insurance:'Insurance',risk_profile:'Risk Profile'};
+  el.innerHTML = `
+    <div class="member-tab-bar" id="mem-tabs">
+      ${members.map((m,i)=>`
+        <div class="member-tab ${i===0?'active':''}" onclick="switchMemberTab('${m.id}','${section}')" data-mid="${m.id}">
+          <div class="member-avatar" style="background:${avatarColor(m.name)};color:#fff">${inits(m.name)}</div>
+          ${m.name.split(' ')[0]}
+        </div>`).join('')}
     </div>
+    ${members.map((m,i)=>`
+      <div id="mdata-${m.id}" style="display:${i===0?'block':'none'}">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div class="card-title" style="margin:0">${m.name} — ${labels[section]}</div>
+            <button class="btn btn-blue btn-sm" onclick="openDataModal('${section}','${m.id}',false)">Edit</button>
+          </div>
+          ${renderDataTable(section, memberData[m.id]?.[section]||{})}
+        </div>
+      </div>`).join('')}`;
+}
+
+function switchMemberTab(memberId, section) {
+  document.querySelectorAll('#mem-tabs .member-tab').forEach(t=>t.classList.toggle('active', t.dataset.mid===memberId));
+  document.querySelectorAll('[id^="mdata-"]').forEach(d=>d.style.display='none');
+  document.getElementById(`mdata-${memberId}`).style.display = '';
+}
+
+function renderFamilySection(el, section, data, members, isFamily) {
+  el.innerHTML = `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="card-title" style="margin:0">Family Goals</div>
+        <button class="btn btn-blue btn-sm" onclick="openDataModal('goals',null,true)">Edit</button>
+      </div>
+      ${renderDataTable('goals', data)}
+    </div>`;
+}
+
+function renderAdvisorPlan(el) {
+  const plan = currentFamilyData._plan;
+  if (!plan) {
+    el.innerHTML = `<div class="card"><div class="empty" style="padding:40px">
+      <div class="icon">📋</div><h3>No plan yet</h3>
+      <p style="margin-bottom:16px">Fill in member data across all sections then generate a plan.</p>
+      <button class="btn btn-blue" onclick="generatePlan()">Generate Plan Now</button>
+    </div></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div><div class="card-title" style="margin:0">Family Financial Plan</div>
+        <div class="card-sub">Generated ${plan.updated_at||''}</div></div>
+      <button class="btn btn-green btn-sm" onclick="generatePlan()">↻ Regenerate</button>
+    </div>
+    <div class="plan-output">${formatPlan(plan.plan)}</div>
   </div>`;
 }
 
-// ── ASSETS & LIABILITIES FORM ────────────────────────────────────
-function renderAssetsLiabForm(d) {
-  const al = d;
-  return `
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div class="card-title" style="margin:0">Assets & Liabilities</div>
-      <button class="btn btn-blue btn-sm" onclick="openDataEntry('assets_liabilities')">Edit</button>
-    </div>
+function renderDataTable(section, d) {
+  if (section === 'income_expenses') return `
     <div class="grid-2">
-      <div>
-        <div class="section-label">Assets</div>
+      <div><div class="section-label">Income (Monthly)</div>
         <table class="tbl">
-          <tr><td>Real estate</td><td class="mono" style="text-align:right">${fmtL(al.real_estate||0)}</td></tr>
-          <tr><td>Gold / jewellery</td><td class="mono" style="text-align:right">${fmtL(al.gold||0)}</td></tr>
-          <tr><td>Equity / MF</td><td class="mono" style="text-align:right">${fmtL(al.equity||0)}</td></tr>
-          <tr><td>Debt instruments</td><td class="mono" style="text-align:right">${fmtL(al.debt_instruments||0)}</td></tr>
-          <tr><td>EPF / PPF</td><td class="mono" style="text-align:right">${fmtL(al.epf_ppf||0)}</td></tr>
-          <tr><td>Cash / bank</td><td class="mono" style="text-align:right">${fmtL(al.cash||0)}</td></tr>
-          <tr><td>Vehicles</td><td class="mono" style="text-align:right">${fmtL(al.vehicles||0)}</td></tr>
-          <tr><td>Other assets</td><td class="mono" style="text-align:right">${fmtL(al.other_assets||0)}</td></tr>
-          <tr style="font-weight:600"><td>Total Assets</td><td class="mono" style="text-align:right;color:var(--green)">${fmtL((al.real_estate||0)+(al.gold||0)+(al.equity||0)+(al.debt_instruments||0)+(al.epf_ppf||0)+(al.cash||0)+(al.vehicles||0)+(al.other_assets||0))}</td></tr>
+          ${[['Primary income',d.primary_income],['Secondary income',d.secondary_income],['Rental income',d.rental_income],['Other income',d.other_income]]
+            .map(([l,v])=>`<tr><td>${l}</td><td class="mono" style="text-align:right">${fmtL(v||0)}</td></tr>`).join('')}
+          <tr style="font-weight:600"><td>Total</td><td class="mono" style="text-align:right;color:var(--green)">${fmtL((d.primary_income||0)+(d.secondary_income||0)+(d.rental_income||0)+(d.other_income||0))}</td></tr>
         </table>
       </div>
-      <div>
-        <div class="section-label">Liabilities</div>
+      <div><div class="section-label">Expenses (Monthly)</div>
         <table class="tbl">
-          <tr><td>Home loan</td><td class="mono" style="text-align:right">${fmtL(al.home_loan||0)}</td></tr>
-          <tr><td>Car loan</td><td class="mono" style="text-align:right">${fmtL(al.car_loan||0)}</td></tr>
-          <tr><td>Personal loan</td><td class="mono" style="text-align:right">${fmtL(al.personal_loan||0)}</td></tr>
-          <tr><td>Credit card dues</td><td class="mono" style="text-align:right">${fmtL(al.credit_card||0)}</td></tr>
-          <tr><td>Other loans</td><td class="mono" style="text-align:right">${fmtL(al.other_loans||0)}</td></tr>
-          <tr style="font-weight:600"><td>Total Liabilities</td><td class="mono" style="text-align:right;color:var(--red)">${fmtL((al.home_loan||0)+(al.car_loan||0)+(al.personal_loan||0)+(al.credit_card||0)+(al.other_loans||0))}</td></tr>
+          ${[['EMI',d.emi],['Rent',d.rent],['SIP',d.sip],['Savings',d.savings],['Household',d.household],['Transport',d.transport],['Lifestyle',d.lifestyle],['Insurance',d.insurance_premium],['Other',d.other_expenses]]
+            .map(([l,v])=>`<tr><td>${l}</td><td class="mono" style="text-align:right">${fmtL(v||0)}</td></tr>`).join('')}
+          <tr style="font-weight:600"><td>Total</td><td class="mono" style="text-align:right;color:var(--red)">${fmtL(['emi','rent','sip','savings','household','transport','lifestyle','insurance_premium','other_expenses'].reduce((s,k)=>s+(d[k]||0),0))}</td></tr>
+        </table>
+      </div>
+    </div>`;
+
+  if (section === 'assets_liabilities') {
+    const tA = ['real_estate','gold','equity','debt_instruments','epf_ppf','cash','vehicles','other_assets'].reduce((s,k)=>s+(d[k]||0),0);
+    const tL = ['home_loan','car_loan','personal_loan','credit_card','other_loans'].reduce((s,k)=>s+(d[k]||0),0);
+    return `<div class="grid-2">
+      <div><div class="section-label">Assets</div>
+        <table class="tbl">
+          ${[['Real estate',d.real_estate],['Gold',d.gold],['Equity/MF',d.equity],['Debt/Bonds',d.debt_instruments],['EPF/PPF',d.epf_ppf],['Cash',d.cash],['Vehicles',d.vehicles],['Other',d.other_assets]]
+            .map(([l,v])=>`<tr><td>${l}</td><td class="mono" style="text-align:right">${fmtL(v||0)}</td></tr>`).join('')}
+          <tr style="font-weight:600"><td>Total</td><td class="mono" style="text-align:right;color:var(--green)">${fmtL(tA)}</td></tr>
+        </table>
+      </div>
+      <div><div class="section-label">Liabilities</div>
+        <table class="tbl">
+          ${[['Home loan',d.home_loan],['Car loan',d.car_loan],['Personal loan',d.personal_loan],['Credit card',d.credit_card],['Other',d.other_loans]]
+            .map(([l,v])=>`<tr><td>${l}</td><td class="mono" style="text-align:right">${fmtL(v||0)}</td></tr>`).join('')}
+          <tr style="font-weight:600"><td>Total</td><td class="mono" style="text-align:right;color:var(--red)">${fmtL(tL)}</td></tr>
         </table>
         <div class="divider"></div>
         <div style="display:flex;justify-content:space-between;font-weight:600;font-size:15px">
-          <span>Net Worth</span>
-          <span class="mono" style="color:var(--accent)">${fmtL(((al.real_estate||0)+(al.gold||0)+(al.equity||0)+(al.debt_instruments||0)+(al.epf_ppf||0)+(al.cash||0)+(al.vehicles||0)+(al.other_assets||0))-((al.home_loan||0)+(al.car_loan||0)+(al.personal_loan||0)+(al.credit_card||0)+(al.other_loans||0)))}</span>
+          <span>Net Worth</span><span class="mono" style="color:var(--accent)">${fmtL(tA-tL)}</span>
         </div>
       </div>
-    </div>
-  </div>`;
-}
+    </div>`;
+  }
 
-function renderInsuranceForm(d) {
-  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div class="card-title" style="margin:0">Insurance</div><button class="btn btn-blue btn-sm" onclick="openDataEntry('insurance')">Edit</button></div>
-  <table class="tbl">
-    <tr><td>Term insurance cover</td><td class="mono">${fmtL(d.term_cover||0)}</td><td>Annual premium</td><td class="mono">${fmtL(d.term_premium||0)}</td></tr>
-    <tr><td>Health insurance cover</td><td class="mono">${fmtL(d.health_cover||0)}</td><td>Annual premium</td><td class="mono">${fmtL(d.health_premium||0)}</td></tr>
-    <tr><td>Critical illness cover</td><td class="mono">${fmtL(d.ci_cover||0)}</td><td>Annual premium</td><td class="mono">${fmtL(d.ci_premium||0)}</td></tr>
-    <tr><td>Vehicle insurance</td><td colspan="3">${d.vehicle_insurance||'—'}</td></tr>
+  if (section === 'insurance') return `<table class="tbl">
+    <tr><td>Term cover</td><td class="mono">${fmtL(d.term_cover||0)}</td><td>Annual premium</td><td class="mono">${fmtL(d.term_premium||0)}</td></tr>
+    <tr><td>Health cover</td><td class="mono">${fmtL(d.health_cover||0)}</td><td>Annual premium</td><td class="mono">${fmtL(d.health_premium||0)}</td></tr>
+    <tr><td>Critical illness</td><td class="mono">${fmtL(d.ci_cover||0)}</td><td>Annual premium</td><td class="mono">${fmtL(d.ci_premium||0)}</td></tr>
     <tr><td>Notes</td><td colspan="3" style="color:var(--text-muted)">${d.notes||'—'}</td></tr>
-  </table></div>`;
-}
+  </table>`;
 
-function renderInvestmentsForm(d) {
-  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div class="card-title" style="margin:0">Investments</div><button class="btn btn-blue btn-sm" onclick="openDataEntry('investments')">Edit</button></div>
-  <table class="tbl">
-    <tr><td>Monthly SIP</td><td class="mono">${fmtL(d.monthly_sip||0)}</td><td>Equity MF value</td><td class="mono">${fmtL(d.equity_mf||0)}</td></tr>
-    <tr><td>Stocks value</td><td class="mono">${fmtL(d.stocks||0)}</td><td>Debt MF / bonds</td><td class="mono">${fmtL(d.debt_mf||0)}</td></tr>
-    <tr><td>EPF corpus</td><td class="mono">${fmtL(d.epf||0)}</td><td>PPF corpus</td><td class="mono">${fmtL(d.ppf||0)}</td></tr>
-    <tr><td>NPS corpus</td><td class="mono">${fmtL(d.nps||0)}</td><td>Fixed deposits</td><td class="mono">${fmtL(d.fd||0)}</td></tr>
-    <tr><td>Crypto / alt</td><td class="mono">${fmtL(d.crypto||0)}</td><td>Risk profile</td><td>${d.risk||'—'}</td></tr>
-    <tr><td>Notes</td><td colspan="3" style="color:var(--text-muted)">${d.notes||'—'}</td></tr>
-  </table></div>`;
-}
-
-function renderGoalsForm(d) {
-  const goals = d.goals || [];
-  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div class="card-title" style="margin:0">Financial Goals</div><button class="btn btn-blue btn-sm" onclick="openDataEntry('goals')">Edit</button></div>
-  ${goals.length ? `<table class="tbl"><thead><tr><th>Goal</th><th>Target Amount</th><th>Timeline</th><th>Priority</th><th>Current savings</th></tr></thead><tbody>
-  ${goals.map(g=>`<tr><td>${g.name||'—'}</td><td class="mono">${fmtL(g.amount||0)}</td><td>${g.years||'—'} yrs</td><td><span class="badge badge-${g.priority==='High'?'red':g.priority==='Medium'?'amber':'blue'}">${g.priority||'—'}</span></td><td class="mono">${fmtL(g.current||0)}</td></tr>`).join('')}
-  </tbody></table>` : '<div class="empty-state" style="padding:30px"><p>No goals added yet</p></div>'}</div>`;
-}
-
-function renderRiskForm(d) {
-  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div class="card-title" style="margin:0">Risk Profile</div><button class="btn btn-blue btn-sm" onclick="openDataEntry('risk_profile')">Edit</button></div>
-  <table class="tbl">
+  if (section === 'risk_profile') return `<table class="tbl">
     <tr><td>Risk appetite</td><td><span class="badge badge-${d.risk_appetite==='Aggressive'?'red':d.risk_appetite==='Moderate'?'amber':'blue'}">${d.risk_appetite||'—'}</span></td></tr>
     <tr><td>Investment horizon</td><td>${d.horizon||'—'}</td></tr>
     <tr><td>Age</td><td>${d.age||'—'}</td></tr>
     <tr><td>Dependents</td><td>${d.dependents||'—'}</td></tr>
     <tr><td>Income stability</td><td>${d.income_stability||'—'}</td></tr>
-    <tr><td>Notes</td><td style="color:var(--text-muted)">${d.notes||'—'}</td></tr>
-  </table></div>`;
-}
+  </table>`;
 
-function renderPlanSection(el) {
-  const plan = currentClientData._plan;
-  if (!plan) {
-    el.innerHTML = `<div class="card"><div class="empty-state" style="padding:40px">
-      <div class="icon">📋</div><h3>No plan generated yet</h3>
-      <p style="margin-bottom:16px">Fill in the client's financial data across all sections, then click Generate Plan.</p>
-      <button class="btn btn-blue" onclick="generatePlan()">Generate Plan Now</button>
-    </div></div>`;
-    return;
+  if (section === 'goals') {
+    const goals = d.goals || [];
+    if (!goals.length) return '<div class="empty" style="padding:30px"><p>No goals added yet. Click Edit to add family goals.</p></div>';
+    return `<table class="tbl"><thead><tr><th>Goal</th><th>Target</th><th>Timeline</th><th>Priority</th><th>Saved</th></tr></thead><tbody>
+      ${goals.map(g=>`<tr>
+        <td>${g.name||'—'}</td>
+        <td class="mono">${fmtL(g.amount||0)}</td>
+        <td>${g.years||'—'} yrs</td>
+        <td><span class="badge badge-${g.priority==='High'?'red':g.priority==='Medium'?'amber':'blue'}">${g.priority||'—'}</span></td>
+        <td class="mono">${fmtL(g.current||0)}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
   }
-  el.innerHTML = `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-    <div><div class="card-title" style="margin:0">Financial Plan</div><div class="card-sub">Generated ${plan.updated_at||''}</div></div>
-    <button class="btn btn-green btn-sm" onclick="generatePlan()">↻ Regenerate</button>
-  </div><div class="plan-output">${formatPlan(plan.plan)}</div></div>`;
-}
 
-function formatPlan(text) {
-  if (!text) return '';
-  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/^#{1,2} (.+)$/gm, '<h2 style="font-size:16px;font-weight:700;color:var(--navy);margin:20px 0 8px">$1</h2>')
-    .replace(/^### (.+)$/gm, '<h3 style="font-size:14px;font-weight:600;color:var(--accent);margin:14px 0 6px">$1</h3>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br>');
+  return '<p style="color:var(--text-muted);padding:12px">No data yet.</p>';
 }
 
 // ================================================================
-//  DATA ENTRY MODALS
+//  DATA ENTRY MODAL
 // ================================================================
-let deSection = '';
-let deTempData = {};
+function openDataModal(section, memberId, isFamily) {
+  currentDataModal = {section, memberId, isFamily};
+  const labels = {income_expenses:'Income & Expenses',assets_liabilities:'Assets & Liabilities',
+                  insurance:'Insurance',risk_profile:'Risk Profile',goals:'Family Goals'};
+  document.getElementById('modal-data-title').textContent = labels[section] || section;
 
-function openDataEntry(section) {
-  deSection = section;
-  deTempData = JSON.parse(JSON.stringify(currentClientData[section] || {}));
-  document.getElementById('de-modal-title').textContent = {
-    income_expenses: 'Income & Expenses',
-    assets_liabilities: 'Assets & Liabilities',
-    insurance: 'Insurance',
-    investments: 'Investments',
-    goals: 'Goals',
-    risk_profile: 'Risk Profile'
-  }[section];
-  document.getElementById('de-form-body').innerHTML = getDataEntryForm(section, deTempData);
-  openModal('modal-data-entry');
+  let existing = {};
+  if (isFamily) {
+    existing = currentFamilyData.family_data?.[section] || {};
+  } else {
+    existing = currentFamilyData.member_data?.[memberId]?.[section] || {};
+  }
+
+  document.getElementById('modal-data-body').innerHTML = getDataForm(section, existing);
+  openModal('modal-data');
 }
 
-function getDataEntryForm(section, d) {
+function getDataForm(section, d) {
   if (section === 'income_expenses') return `
     <div class="section-label">Monthly Income</div>
     <div class="form-row cols-2">
-      <div class="form-group"><label>Primary income (salary)</label><input type="number" id="de-primary_income" value="${d.primary_income||''}" placeholder="0"></div>
-      <div class="form-group"><label>Secondary income (spouse/partner)</label><input type="number" id="de-secondary_income" value="${d.secondary_income||''}" placeholder="0"></div>
+      <div class="form-group"><label>Primary income</label><input type="number" id="de-primary_income" value="${d.primary_income||''}"></div>
+      <div class="form-group"><label>Secondary income</label><input type="number" id="de-secondary_income" value="${d.secondary_income||''}"></div>
     </div>
     <div class="form-row cols-2">
-      <div class="form-group"><label>Rental income</label><input type="number" id="de-rental_income" value="${d.rental_income||''}" placeholder="0"></div>
-      <div class="form-group"><label>Other income</label><input type="number" id="de-other_income" value="${d.other_income||''}" placeholder="0"></div>
+      <div class="form-group"><label>Rental income</label><input type="number" id="de-rental_income" value="${d.rental_income||''}"></div>
+      <div class="form-group"><label>Other income</label><input type="number" id="de-other_income" value="${d.other_income||''}"></div>
     </div>
     <div class="divider"></div>
     <div class="section-label">Monthly Expenses</div>
     <div class="form-row cols-3">
-      <div class="form-group"><label>EMI / Loan payments</label><input type="number" id="de-emi" value="${d.emi||''}" placeholder="0"></div>
-      <div class="form-group"><label>Rent</label><input type="number" id="de-rent" value="${d.rent||''}" placeholder="0"></div>
-      <div class="form-group"><label>SIP / Investments</label><input type="number" id="de-sip" value="${d.sip||''}" placeholder="0"></div>
+      <div class="form-group"><label>EMI</label><input type="number" id="de-emi" value="${d.emi||''}"></div>
+      <div class="form-group"><label>Rent</label><input type="number" id="de-rent" value="${d.rent||''}"></div>
+      <div class="form-group"><label>SIP / Investments</label><input type="number" id="de-sip" value="${d.sip||''}"></div>
     </div>
     <div class="form-row cols-3">
-      <div class="form-group"><label>Savings</label><input type="number" id="de-savings" value="${d.savings||''}" placeholder="0"></div>
-      <div class="form-group"><label>Household (groceries, utilities)</label><input type="number" id="de-household" value="${d.household||''}" placeholder="0"></div>
-      <div class="form-group"><label>Transport (fuel, maintenance)</label><input type="number" id="de-transport" value="${d.transport||''}" placeholder="0"></div>
+      <div class="form-group"><label>Savings</label><input type="number" id="de-savings" value="${d.savings||''}"></div>
+      <div class="form-group"><label>Household / utilities</label><input type="number" id="de-household" value="${d.household||''}"></div>
+      <div class="form-group"><label>Transport / fuel</label><input type="number" id="de-transport" value="${d.transport||''}"></div>
     </div>
     <div class="form-row cols-3">
-      <div class="form-group"><label>Lifestyle / discretionary</label><input type="number" id="de-lifestyle" value="${d.lifestyle||''}" placeholder="0"></div>
-      <div class="form-group"><label>Insurance premiums</label><input type="number" id="de-insurance_premium" value="${d.insurance_premium||''}" placeholder="0"></div>
-      <div class="form-group"><label>Other expenses</label><input type="number" id="de-other_expenses" value="${d.other_expenses||''}" placeholder="0"></div>
+      <div class="form-group"><label>Lifestyle</label><input type="number" id="de-lifestyle" value="${d.lifestyle||''}"></div>
+      <div class="form-group"><label>Insurance premium</label><input type="number" id="de-insurance_premium" value="${d.insurance_premium||''}"></div>
+      <div class="form-group"><label>Other expenses</label><input type="number" id="de-other_expenses" value="${d.other_expenses||''}"></div>
     </div>`;
 
   if (section === 'assets_liabilities') return `
-    <div class="section-label">Assets (Current Value ₹)</div>
+    <div class="section-label">Assets</div>
     <div class="form-row cols-3">
-      <div class="form-group"><label>Real estate</label><input type="number" id="de-real_estate" value="${d.real_estate||''}" placeholder="0"></div>
-      <div class="form-group"><label>Gold / jewellery</label><input type="number" id="de-gold" value="${d.gold||''}" placeholder="0"></div>
-      <div class="form-group"><label>Equity / Mutual Funds</label><input type="number" id="de-equity" value="${d.equity||''}" placeholder="0"></div>
+      <div class="form-group"><label>Real estate</label><input type="number" id="de-real_estate" value="${d.real_estate||''}"></div>
+      <div class="form-group"><label>Gold / jewellery</label><input type="number" id="de-gold" value="${d.gold||''}"></div>
+      <div class="form-group"><label>Equity / MF</label><input type="number" id="de-equity" value="${d.equity||''}"></div>
     </div>
     <div class="form-row cols-3">
-      <div class="form-group"><label>Debt instruments / Bonds</label><input type="number" id="de-debt_instruments" value="${d.debt_instruments||''}" placeholder="0"></div>
-      <div class="form-group"><label>EPF / PPF</label><input type="number" id="de-epf_ppf" value="${d.epf_ppf||''}" placeholder="0"></div>
-      <div class="form-group"><label>Cash / Bank balance</label><input type="number" id="de-cash" value="${d.cash||''}" placeholder="0"></div>
+      <div class="form-group"><label>Debt instruments</label><input type="number" id="de-debt_instruments" value="${d.debt_instruments||''}"></div>
+      <div class="form-group"><label>EPF / PPF</label><input type="number" id="de-epf_ppf" value="${d.epf_ppf||''}"></div>
+      <div class="form-group"><label>Cash / Bank</label><input type="number" id="de-cash" value="${d.cash||''}"></div>
     </div>
     <div class="form-row cols-2">
-      <div class="form-group"><label>Vehicles</label><input type="number" id="de-vehicles" value="${d.vehicles||''}" placeholder="0"></div>
-      <div class="form-group"><label>Other assets</label><input type="number" id="de-other_assets" value="${d.other_assets||''}" placeholder="0"></div>
+      <div class="form-group"><label>Vehicles</label><input type="number" id="de-vehicles" value="${d.vehicles||''}"></div>
+      <div class="form-group"><label>Other assets</label><input type="number" id="de-other_assets" value="${d.other_assets||''}"></div>
     </div>
     <div class="divider"></div>
-    <div class="section-label">Liabilities (Outstanding Balance ₹)</div>
+    <div class="section-label">Liabilities</div>
     <div class="form-row cols-3">
-      <div class="form-group"><label>Home loan</label><input type="number" id="de-home_loan" value="${d.home_loan||''}" placeholder="0"></div>
-      <div class="form-group"><label>Car loan</label><input type="number" id="de-car_loan" value="${d.car_loan||''}" placeholder="0"></div>
-      <div class="form-group"><label>Personal loan</label><input type="number" id="de-personal_loan" value="${d.personal_loan||''}" placeholder="0"></div>
+      <div class="form-group"><label>Home loan</label><input type="number" id="de-home_loan" value="${d.home_loan||''}"></div>
+      <div class="form-group"><label>Car loan</label><input type="number" id="de-car_loan" value="${d.car_loan||''}"></div>
+      <div class="form-group"><label>Personal loan</label><input type="number" id="de-personal_loan" value="${d.personal_loan||''}"></div>
     </div>
     <div class="form-row cols-2">
-      <div class="form-group"><label>Credit card dues</label><input type="number" id="de-credit_card" value="${d.credit_card||''}" placeholder="0"></div>
-      <div class="form-group"><label>Other loans</label><input type="number" id="de-other_loans" value="${d.other_loans||''}" placeholder="0"></div>
+      <div class="form-group"><label>Credit card dues</label><input type="number" id="de-credit_card" value="${d.credit_card||''}"></div>
+      <div class="form-group"><label>Other loans</label><input type="number" id="de-other_loans" value="${d.other_loans||''}"></div>
     </div>`;
 
   if (section === 'insurance') return `
     <div class="form-row cols-2">
-      <div class="form-group"><label>Term insurance cover (₹)</label><input type="number" id="de-term_cover" value="${d.term_cover||''}" placeholder="0"></div>
-      <div class="form-group"><label>Term insurance annual premium (₹)</label><input type="number" id="de-term_premium" value="${d.term_premium||''}" placeholder="0"></div>
+      <div class="form-group"><label>Term cover (₹)</label><input type="number" id="de-term_cover" value="${d.term_cover||''}"></div>
+      <div class="form-group"><label>Term premium / year (₹)</label><input type="number" id="de-term_premium" value="${d.term_premium||''}"></div>
     </div>
     <div class="form-row cols-2">
-      <div class="form-group"><label>Health insurance cover (₹)</label><input type="number" id="de-health_cover" value="${d.health_cover||''}" placeholder="0"></div>
-      <div class="form-group"><label>Health insurance annual premium (₹)</label><input type="number" id="de-health_premium" value="${d.health_premium||''}" placeholder="0"></div>
+      <div class="form-group"><label>Health cover (₹)</label><input type="number" id="de-health_cover" value="${d.health_cover||''}"></div>
+      <div class="form-group"><label>Health premium / year (₹)</label><input type="number" id="de-health_premium" value="${d.health_premium||''}"></div>
     </div>
     <div class="form-row cols-2">
-      <div class="form-group"><label>Critical illness cover (₹)</label><input type="number" id="de-ci_cover" value="${d.ci_cover||''}" placeholder="0"></div>
-      <div class="form-group"><label>Critical illness premium (₹)</label><input type="number" id="de-ci_premium" value="${d.ci_premium||''}" placeholder="0"></div>
+      <div class="form-group"><label>Critical illness cover (₹)</label><input type="number" id="de-ci_cover" value="${d.ci_cover||''}"></div>
+      <div class="form-group"><label>CI premium / year (₹)</label><input type="number" id="de-ci_premium" value="${d.ci_premium||''}"></div>
     </div>
-    <div class="form-group"><label>Vehicle insurance details</label><input type="text" id="de-vehicle_insurance" value="${d.vehicle_insurance||''}" placeholder="e.g. Comprehensive, third party"></div>
     <div class="form-group"><label>Notes</label><textarea id="de-notes">${d.notes||''}</textarea></div>`;
-
-  if (section === 'investments') return `
-    <div class="form-row cols-3">
-      <div class="form-group"><label>Monthly SIP (₹)</label><input type="number" id="de-monthly_sip" value="${d.monthly_sip||''}" placeholder="0"></div>
-      <div class="form-group"><label>Equity MF value (₹)</label><input type="number" id="de-equity_mf" value="${d.equity_mf||''}" placeholder="0"></div>
-      <div class="form-group"><label>Stocks value (₹)</label><input type="number" id="de-stocks" value="${d.stocks||''}" placeholder="0"></div>
-    </div>
-    <div class="form-row cols-3">
-      <div class="form-group"><label>Debt MF / bonds (₹)</label><input type="number" id="de-debt_mf" value="${d.debt_mf||''}" placeholder="0"></div>
-      <div class="form-group"><label>EPF corpus (₹)</label><input type="number" id="de-epf" value="${d.epf||''}" placeholder="0"></div>
-      <div class="form-group"><label>PPF corpus (₹)</label><input type="number" id="de-ppf" value="${d.ppf||''}" placeholder="0"></div>
-    </div>
-    <div class="form-row cols-3">
-      <div class="form-group"><label>NPS corpus (₹)</label><input type="number" id="de-nps" value="${d.nps||''}" placeholder="0"></div>
-      <div class="form-group"><label>Fixed deposits (₹)</label><input type="number" id="de-fd" value="${d.fd||''}" placeholder="0"></div>
-      <div class="form-group"><label>Crypto / alternatives (₹)</label><input type="number" id="de-crypto" value="${d.crypto||''}" placeholder="0"></div>
-    </div>
-    <div class="form-row cols-2">
-      <div class="form-group"><label>Risk profile</label>
-        <select id="de-risk"><option ${d.risk==='Conservative'?'selected':''}>Conservative</option><option ${d.risk==='Moderate'?'selected':''}>Moderate</option><option ${d.risk==='Aggressive'?'selected':''}>Aggressive</option></select>
-      </div>
-      <div class="form-group"><label>Notes</label><input type="text" id="de-notes" value="${d.notes||''}" placeholder="Any other details"></div>
-    </div>`;
-
-  if (section === 'goals') {
-    const goals = d.goals || [{}];
-    return `<div id="goals-list">${goals.map((g,i) => goalRow(g,i)).join('')}</div>
-    <button class="btn btn-outline btn-sm" style="margin-top:12px" onclick="addGoalRow()">+ Add Goal</button>`;
-  }
 
   if (section === 'risk_profile') return `
     <div class="form-row cols-2">
-      <div class="form-group"><label>Age</label><input type="number" id="de-age" value="${d.age||''}" placeholder="26"></div>
-      <div class="form-group"><label>Number of dependents</label><input type="number" id="de-dependents" value="${d.dependents||''}" placeholder="0"></div>
+      <div class="form-group"><label>Age</label><input type="number" id="de-age" value="${d.age||''}"></div>
+      <div class="form-group"><label>Dependents</label><input type="number" id="de-dependents" value="${d.dependents||''}"></div>
     </div>
     <div class="form-row cols-2">
       <div class="form-group"><label>Risk appetite</label>
@@ -1402,66 +1159,78 @@ function getDataEntryForm(section, d) {
         <select id="de-horizon"><option ${d.horizon==='Short (< 3 years)'?'selected':''}>Short (&lt; 3 years)</option><option ${d.horizon==='Medium (3-7 years)'?'selected':''}>Medium (3-7 years)</option><option ${d.horizon==='Long (7+ years)'?'selected':''}>Long (7+ years)</option></select>
       </div>
     </div>
-    <div class="form-row cols-2">
-      <div class="form-group"><label>Income stability</label>
-        <select id="de-income_stability"><option ${d.income_stability==='Stable (salaried)'?'selected':''}>Stable (salaried)</option><option ${d.income_stability==='Variable (business)'?'selected':''}>Variable (business)</option><option ${d.income_stability==='Mixed'?'selected':''}>Mixed</option></select>
-      </div>
-      <div class="form-group"><label>Notes</label><input type="text" id="de-notes" value="${d.notes||''}" placeholder="Any other context"></div>
+    <div class="form-group"><label>Income stability</label>
+      <select id="de-income_stability"><option ${d.income_stability==='Stable (salaried)'?'selected':''}>Stable (salaried)</option><option ${d.income_stability==='Variable (business)'?'selected':''}>Variable (business)</option><option ${d.income_stability==='Mixed'?'selected':''}>Mixed</option></select>
     </div>`;
 
-  return '<p>Coming soon</p>';
+  if (section === 'goals') {
+    const goals = (d.goals || [{}]);
+    return `<div id="goals-list">${goals.map((g,i)=>goalRow(g,i)).join('')}</div>
+      <button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="addGoalRow()">+ Add Goal</button>`;
+  }
+  return '';
 }
 
-let goalCount = 0;
-function goalRow(g, i) {
-  goalCount = Math.max(goalCount, i+1);
-  return `<div class="form-row cols-${5}" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:10px;align-items:end" id="goal-row-${i}">
-    <div class="form-group"><label>Goal name</label><input type="text" id="goal-name-${i}" value="${g.name||''}" placeholder="Child education"></div>
-    <div class="form-group"><label>Amount (₹)</label><input type="number" id="goal-amount-${i}" value="${g.amount||''}" placeholder="0"></div>
-    <div class="form-group"><label>Years</label><input type="number" id="goal-years-${i}" value="${g.years||''}" placeholder="10"></div>
-    <div class="form-group"><label>Priority</label><select id="goal-priority-${i}"><option ${g.priority==='High'?'selected':''}>High</option><option ${g.priority==='Medium'?'selected':''}>Medium</option><option ${g.priority==='Low'?'selected':''}>Low</option></select></div>
-    <div class="form-group"><label>Current savings (₹)</label><input type="number" id="goal-current-${i}" value="${g.current||''}" placeholder="0"></div>
-    <button class="btn btn-danger btn-sm" style="margin-bottom:2px" onclick="document.getElementById('goal-row-${i}').remove()">×</button>
-  </div>`;
-}
-
+let goalIdx = 0;
+function goalRow(g, i) { goalIdx = Math.max(goalIdx, i+1); return `
+  <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:12px 14px;margin-bottom:8px" id="gr-${i}">
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
+      <div class="form-group"><label>Goal name</label><input type="text" id="gn-${i}" value="${g.name||''}" placeholder="Child education"></div>
+      <div class="form-group"><label>Amount (₹)</label><input type="number" id="ga-${i}" value="${g.amount||''}"></div>
+      <div class="form-group"><label>Years</label><input type="number" id="gy-${i}" value="${g.years||''}"></div>
+      <div class="form-group"><label>Priority</label><select id="gp-${i}"><option ${g.priority==='High'?'selected':''}>High</option><option ${g.priority==='Medium'?'selected':''}>Medium</option><option ${g.priority==='Low'?'selected':''}>Low</option></select></div>
+      <div class="form-group"><label>Saved (₹)</label><input type="number" id="gc-${i}" value="${g.current||''}"></div>
+      <button class="btn btn-danger btn-sm" style="margin-bottom:2px" onclick="document.getElementById('gr-${i}').remove()">×</button>
+    </div>
+  </div>`; }
 function addGoalRow() {
-  const list = document.getElementById('goals-list');
   const div = document.createElement('div');
-  div.innerHTML = goalRow({}, goalCount);
-  list.appendChild(div.firstChild);
+  div.innerHTML = goalRow({}, goalIdx);
+  document.getElementById('goals-list').appendChild(div.firstChild);
 }
 
-async function saveDataSection() {
-  const section = deSection;
+async function submitDataModal() {
+  const {section, memberId, isFamily} = currentDataModal;
   let data = {};
 
   if (section === 'goals') {
-    const rows = document.querySelectorAll('[id^="goal-row-"]');
-    data.goals = Array.from(rows).map((_, i) => {
-      const idx = _?.id?.replace('goal-row-','');
-      return {
-        name: document.getElementById(`goal-name-${idx}`)?.value,
-        amount: parseFloat(document.getElementById(`goal-amount-${idx}`)?.value)||0,
-        years: parseInt(document.getElementById(`goal-years-${idx}`)?.value)||0,
-        priority: document.getElementById(`goal-priority-${idx}`)?.value,
-        current: parseFloat(document.getElementById(`goal-current-${idx}`)?.value)||0,
-      };
-    }).filter(g => g.name);
+    data.goals = [];
+    document.querySelectorAll('[id^="gr-"]').forEach(row => {
+      const i = row.id.replace('gr-','');
+      const name = document.getElementById(`gn-${i}`)?.value;
+      if (name) data.goals.push({
+        name, amount:parseFloat(document.getElementById(`ga-${i}`)?.value)||0,
+        years:parseInt(document.getElementById(`gy-${i}`)?.value)||0,
+        priority:document.getElementById(`gp-${i}`)?.value,
+        current:parseFloat(document.getElementById(`gc-${i}`)?.value)||0
+      });
+    });
   } else {
-    document.querySelectorAll('#de-form-body [id^="de-"]').forEach(el => {
+    document.querySelectorAll('#modal-data-body [id^="de-"]').forEach(el => {
       const key = el.id.replace('de-','');
       data[key] = el.type==='number' ? (parseFloat(el.value)||0) : el.value;
     });
   }
 
-  const res = await api(`/api/clients/${currentClientId}/data/${section}`, { method:'POST', body: data });
+  let url, res;
+  if (isFamily) {
+    url = `/api/families/${currentFamilyId}/data/${section}`;
+    res = await api(url, {method:'POST', body:data});
+  } else {
+    url = `/api/families/${currentFamilyId}/members/${memberId}/data/${section}`;
+    res = await api(url, {method:'POST', body:data});
+  }
+
   if (res?.status==='success') {
-    toast('Saved!', 'success');
-    closeModal('modal-data-entry');
-    currentClientData[section] = data;
-    renderDataSection(section);
-  } else { toast(res?.error||'Save failed', 'error'); }
+    toast('Saved!','success');
+    closeModal('modal-data');
+    // Refresh data
+    const freshData = await api(`/api/families/${currentFamilyId}/data`);
+    if (freshData) {
+      currentFamilyData = {...currentFamilyData, ...freshData};
+      renderFamilyTab(currentFamilyTab);
+    }
+  } else toast(res?.error||'Save failed','error');
 }
 
 // ================================================================
@@ -1469,28 +1238,30 @@ async function saveDataSection() {
 // ================================================================
 async function generatePlan() {
   const btn = document.getElementById('btn-gen-plan');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Generating…';
-  toast('Generating plan with AI… this may take 30s', 'info');
-  const res = await api(`/api/clients/${currentClientId}/plan/generate`, { method:'POST' });
-  btn.disabled = false;
-  btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Generate Plan';
+  if (btn) { btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Generating…'; }
+  toast('Generating family plan with AI… may take ~30s','info');
+
+  const res = await api(`/api/families/${currentFamilyId}/plan/generate`, {method:'POST'});
+
+  if (btn) { btn.disabled=false; btn.innerHTML='<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Generate Plan'; }
+
   if (res?.status==='success') {
-    toast('Plan generated!', 'success');
-    currentClientData._plan = { plan: res.plan, updated_at: res.updated_at };
-    switchDataSection('plan');
-  } else { toast(res?.error||'Generation failed', 'error'); }
+    toast('Plan generated!','success');
+    currentFamilyData._plan = {plan:res.plan, updated_at:res.updated_at};
+    switchFamilyTab('plan');
+  } else toast(res?.error||'Generation failed','error');
 }
 
 // ================================================================
-//  CLIENT VIEWS
+//  CLIENT VIEW
 // ================================================================
-async function loadClientData(clientId) {
-  const data = await api(`/api/clients/${clientId}/data`);
-  const plan = await api(`/api/clients/${clientId}/plan`);
+async function loadClientView() {
+  const [data, plan] = await Promise.all([
+    api(`/api/families/${auth.familyId}/data`),
+    api(`/api/families/${auth.familyId}/plan`)
+  ]);
   if (!data) return;
-  currentClientData = data;
-  if (plan?.plan) currentClientData._plan = plan;
+  currentFamilyData = {...(data||{}), _plan: plan?.plan ? plan : null};
   renderClientOverview();
   renderClientNetWorth();
   renderClientCashFlow();
@@ -1498,219 +1269,233 @@ async function loadClientData(clientId) {
 }
 
 function renderClientOverview() {
-  const al = currentClientData.assets_liabilities || {};
-  const ie = currentClientData.income_expenses || {};
+  const members    = currentFamilyData.members || [];
+  const memberData = currentFamilyData.member_data || {};
 
-  const totalAssets = (al.real_estate||0)+(al.gold||0)+(al.equity||0)+(al.debt_instruments||0)+(al.epf_ppf||0)+(al.cash||0)+(al.vehicles||0)+(al.other_assets||0);
-  const totalLiab   = (al.home_loan||0)+(al.car_loan||0)+(al.personal_loan||0)+(al.credit_card||0)+(al.other_loans||0);
-  const netWorth    = totalAssets - totalLiab;
-  const totalIncome = (ie.primary_income||0)+(ie.secondary_income||0)+(ie.rental_income||0)+(ie.other_income||0);
-  const totalExp    = (ie.emi||0)+(ie.rent||0)+(ie.sip||0)+(ie.savings||0)+(ie.household||0)+(ie.transport||0)+(ie.lifestyle||0)+(ie.insurance_premium||0)+(ie.other_expenses||0);
-  const surplus     = totalIncome - totalExp;
-  const savingsRate = totalIncome ? (((ie.sip||0)+(ie.savings||0))/totalIncome*100).toFixed(1) : 0;
+  let tIncome=0, tExp=0, tAssets=0, tLiab=0, tSip=0, tEmi=0;
+  members.forEach(m => {
+    const ie = memberData[m.id]?.income_expenses || {};
+    const al = memberData[m.id]?.assets_liabilities || {};
+    tIncome  += ['primary_income','secondary_income','rental_income','other_income'].reduce((s,k)=>s+(ie[k]||0),0);
+    tExp     += ['emi','rent','sip','savings','household','transport','lifestyle','insurance_premium','other_expenses'].reduce((s,k)=>s+(ie[k]||0),0);
+    tAssets  += ['real_estate','gold','equity','debt_instruments','epf_ppf','cash','vehicles','other_assets'].reduce((s,k)=>s+(al[k]||0),0);
+    tLiab    += ['home_loan','car_loan','personal_loan','credit_card','other_loans'].reduce((s,k)=>s+(al[k]||0),0);
+    tSip     += (ie.sip||0)+(ie.savings||0);
+    tEmi     += (ie.emi||0);
+  });
 
-  document.getElementById('cl-networth').textContent = fmtL(netWorth);
+  const surplus  = tIncome - tExp;
+  const savRate  = tIncome ? ((tSip/tIncome)*100).toFixed(1) : 0;
+
+  document.getElementById('cl-networth').textContent = fmtL(tAssets-tLiab);
   document.getElementById('cl-surplus').textContent  = fmtL(surplus);
-  document.getElementById('cl-emi').textContent      = fmtL(ie.emi||0);
-  document.getElementById('cl-savrate').textContent  = savingsRate + '%';
-  document.getElementById('cl-surplus').className    = 'stat-value ' + (surplus>=0?'green':'red');
+  document.getElementById('cl-emi').textContent      = fmtL(tEmi);
+  document.getElementById('cl-savrate').textContent  = savRate+'%';
+  document.getElementById('cl-surplus').className    = 'stat-value '+(surplus>=0?'green':'red');
 
   // Alloc bars
-  const allocData = [
-    { label:'Real estate', value:al.real_estate||0, color:'#3B82F6' },
-    { label:'Gold', value:al.gold||0, color:'#F59E0B' },
-    { label:'Equity/MF', value:(al.equity||0), color:'#10B981' },
-    { label:'Debt/FD/Bonds', value:(al.debt_instruments||0), color:'#6366F1' },
-    { label:'EPF/PPF', value:(al.epf_ppf||0), color:'#8B5CF6' },
-    { label:'Cash', value:al.cash||0, color:'#6B7280' },
-    { label:'Vehicles', value:al.vehicles||0, color:'#9CA3AF' },
-  ].filter(a => a.value > 0);
+  const alloc = [
+    {label:'Real estate',  key:'real_estate',     color:'#3B82F6'},
+    {label:'Gold',         key:'gold',             color:'#F59E0B'},
+    {label:'Cash + Debt',  key:'debt_cash',        color:'#10B981'},
+    {label:'Equity / MF',  key:'equity',           color:'#8B5CF6'},
+    {label:'EPF / PPF',    key:'epf_ppf',          color:'#6366F1'},
+    {label:'Vehicles',     key:'vehicles',         color:'#9CA3AF'},
+  ];
+  const totals = {};
+  members.forEach(m => {
+    const al = memberData[m.id]?.assets_liabilities || {};
+    alloc.forEach(a => {
+      if (a.key === 'debt_cash') totals[a.key] = (totals[a.key]||0)+(al.debt_instruments||0)+(al.cash||0);
+      else totals[a.key] = (totals[a.key]||0)+(al[a.key]||0);
+    });
+  });
 
-  const allocEl = document.getElementById('cl-alloc-bars');
-  if (!totalAssets) { allocEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No asset data yet</p>'; }
-  else allocEl.innerHTML = allocData.map(a => `
+  const allocEl = document.getElementById('cl-alloc');
+  if (!tAssets) { allocEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No asset data yet.</p>'; }
+  else allocEl.innerHTML = alloc.filter(a=>totals[a.key]>0).map(a=>`
     <div class="alloc-row">
       <div class="alloc-label">${a.label}</div>
-      <div class="alloc-bar-wrap"><div class="alloc-bar-fill" style="width:${(a.value/totalAssets*100).toFixed(1)}%;background:${a.color}"></div></div>
-      <div class="alloc-pct">${(a.value/totalAssets*100).toFixed(1)}%</div>
-      <div class="alloc-amt">${fmtL(a.value)}</div>
+      <div class="alloc-bar-wrap"><div class="alloc-bar-fill" style="width:${(totals[a.key]/tAssets*100).toFixed(1)}%;background:${a.color}"></div></div>
+      <div class="alloc-pct">${(totals[a.key]/tAssets*100).toFixed(1)}%</div>
+      <div class="alloc-amt">${fmtL(totals[a.key])}</div>
     </div>`).join('');
 
   // Health score
   let score = 5;
-  const debtToIncome = totalIncome ? ((ie.emi||0)/totalIncome) : 0;
-  if (savingsRate >= 20) score += 1.5;
-  if (savingsRate >= 30) score += 0.5;
-  if (debtToIncome < 0.3) score += 1;
-  if (debtToIncome > 0.5) score -= 1.5;
-  if ((al.equity||0)/totalAssets > 0.15) score += 0.5;
+  const dti = tIncome ? tEmi/tIncome : 0;
+  if (savRate >= 30) score += 2; else if (savRate >= 20) score += 1;
+  if (dti < 0.3) score += 1; else if (dti > 0.5) score -= 1.5;
   if (surplus > 0) score += 0.5;
-  score = Math.min(10, Math.max(1, score));
-  const scoreColor = score >= 7 ? '#10B981' : score >= 5 ? '#F59E0B' : '#EF4444';
+  const totEquity = members.reduce((s,m)=>{const al=memberData[m.id]?.assets_liabilities||{}; return s+(al.equity||0);},0);
+  if (tAssets && totEquity/tAssets > 0.15) score += 0.5;
+  score = Math.min(10, Math.max(1, Math.round(score*10)/10));
+  const sc = score >= 7 ? '#10B981' : score >= 5 ? '#F59E0B' : '#EF4444';
 
   document.getElementById('cl-health').innerHTML = `
-    <div style="text-align:center;padding:10px 0">
+    <div style="text-align:center;padding:8px 0">
       <div class="score-ring">
-        <svg width="120" height="120" viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r="50" fill="none" stroke="#E5E7EB" stroke-width="10"/>
-          <circle cx="60" cy="60" r="50" fill="none" stroke="${scoreColor}" stroke-width="10"
-            stroke-dasharray="${(score/10)*314} 314" stroke-linecap="round"/>
+        <svg width="110" height="110" viewBox="0 0 110 110">
+          <circle cx="55" cy="55" r="46" fill="none" stroke="#E5E7EB" stroke-width="9"/>
+          <circle cx="55" cy="55" r="46" fill="none" stroke="${sc}" stroke-width="9"
+            stroke-dasharray="${(score/10)*289} 289" stroke-linecap="round"/>
         </svg>
         <div class="score-text">
-          <div class="score-num" style="color:${scoreColor}">${score.toFixed(1)}</div>
-          <div class="score-label">/ 10</div>
+          <div class="score-num" style="color:${sc}">${score.toFixed(1)}</div>
+          <div class="score-lbl">/ 10</div>
         </div>
       </div>
-      <div style="font-size:13px;color:var(--text-muted);margin-top:10px">${score>=7?'Good shape':(score>=5?'Needs attention':'Needs improvement')}</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:8px">${score>=7?'Good shape':score>=5?'Needs attention':'Needs improvement'}</div>
     </div>
-    <div style="margin-top:16px">
-      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:var(--text-muted)">Savings rate</span><span style="font-weight:600">${savingsRate}%</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:var(--text-muted)">EMI/income ratio</span><span style="font-weight:600">${(debtToIncome*100).toFixed(1)}%</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text-muted)">Debt/net worth</span><span style="font-weight:600">${netWorth?pct(totalLiab,netWorth+totalLiab):'—'}</span></div>
+    <div style="margin-top:14px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--text-muted)">Savings rate</span><span style="font-weight:600">${savRate}%</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--text-muted)">EMI / income</span><span style="font-weight:600">${(dti*100).toFixed(1)}%</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:var(--text-muted)">Debt / net worth</span><span style="font-weight:600">${tAssets?pct(tLiab,tAssets):'—'}</span></div>
     </div>`;
 
   // Insights
-  const insights = [];
-  if (savingsRate >= 20) insights.push({ type:'green', icon:'✅', title:'Strong savings rate', text:`You save ${savingsRate}% of income — well above the recommended 20%.` });
-  else insights.push({ type:'amber', icon:'⚠️', title:'Low savings rate', text:`Your savings rate is ${savingsRate}%. Try to reach at least 20% of income.` });
-  if (debtToIncome > 0.4) insights.push({ type:'red', icon:'🔴', title:'High EMI burden', text:`EMI is ${(debtToIncome*100).toFixed(0)}% of income. Aim to keep this below 40%.` });
-  else if (debtToIncome > 0) insights.push({ type:'green', icon:'✅', title:'EMI under control', text:`EMI is ${(debtToIncome*100).toFixed(0)}% of income — healthy range.` });
-  const equityPct = totalAssets ? ((al.equity||0)/totalAssets*100) : 0;
-  if (equityPct < 10) insights.push({ type:'amber', icon:'📈', title:'Low equity exposure', text:`Only ${equityPct.toFixed(0)}% in equity. Consider increasing for long-term growth.` });
+  const ins = [];
+  if (savRate >= 20) ins.push({t:'green',i:'✅',h:'Strong savings rate',b:`${savRate}% of income saved — above the 20% benchmark.`});
+  else ins.push({t:'amber',i:'⚠️',h:'Low savings rate',b:`${savRate}% saved. Aim for at least 20% of combined income.`});
+  if (dti > 0.4) ins.push({t:'red',i:'🔴',h:'High EMI burden',b:`EMI is ${(dti*100).toFixed(0)}% of income. Try to keep below 40%.`});
+  else if (tEmi > 0) ins.push({t:'green',i:'✅',h:'EMI well managed',b:`EMI is ${(dti*100).toFixed(0)}% of income — healthy.`});
+  if (tAssets && totEquity/tAssets < 0.10) ins.push({t:'amber',i:'📈',h:'Low equity allocation',b:`Only ${(totEquity/tAssets*100).toFixed(0)}% in equity. Consider increasing for long-term growth.`});
 
-  document.getElementById('cl-insights').innerHTML = insights.map(i => `
-    <div class="insight ${i.type}">
-      <div class="insight-icon">${i.icon}</div>
-      <div class="insight-text"><strong>${i.title}</strong>${i.text}</div>
+  document.getElementById('cl-insights').innerHTML = ins.map(i=>`
+    <div class="insight ${i.t}"><div class="insight-icon">${i.i}</div>
+      <div class="insight-text"><strong>${i.h}</strong>${i.b}</div>
     </div>`).join('') || '<p style="color:var(--text-muted);font-size:13px">Add financial data to see insights.</p>';
 }
 
 function renderClientNetWorth() {
-  const al = currentClientData.assets_liabilities || {};
-  const assetItems = [
-    ['Real estate', al.real_estate], ['Gold / jewellery', al.gold],
-    ['Equity / MF', al.equity], ['Debt instruments', al.debt_instruments],
-    ['EPF / PPF', al.epf_ppf], ['Cash / bank', al.cash],
-    ['Vehicles', al.vehicles], ['Other assets', al.other_assets],
-  ].filter(([,v]) => v > 0);
+  const members    = currentFamilyData.members || [];
+  const memberData = currentFamilyData.member_data || {};
 
-  const liabItems = [
-    ['Home loan', al.home_loan], ['Car loan', al.car_loan],
-    ['Personal loan', al.personal_loan], ['Credit card', al.credit_card],
-    ['Other loans', al.other_loans],
-  ].filter(([,v]) => v > 0);
+  const assetKeys = ['real_estate','gold','equity','debt_instruments','epf_ppf','cash','vehicles','other_assets'];
+  const liabKeys  = ['home_loan','car_loan','personal_loan','credit_card','other_loans'];
 
-  const tAssets = assetItems.reduce((s,[,v])=>s+v,0);
-  const tLiab   = liabItems.reduce((s,[,v])=>s+v,0);
+  // Per-member cards
+  document.getElementById('cl-nw-members').innerHTML = `
+    <div class="grid-2">
+      ${members.map(m => {
+        const al = memberData[m.id]?.assets_liabilities || {};
+        const tA = assetKeys.reduce((s,k)=>s+(al[k]||0),0);
+        const tL = liabKeys.reduce((s,k)=>s+(al[k]||0),0);
+        return `<div class="card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+            <div style="width:36px;height:36px;border-radius:50%;background:${avatarColor(m.name)};color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">${inits(m.name)}</div>
+            <div><div style="font-weight:600">${m.name}</div><div style="font-size:12px;color:var(--text-muted)">${m.role==='primary'?'Primary member':'Member'}</div></div>
+          </div>
+          <table class="tbl">
+            ${assetKeys.filter(k=>al[k]>0).map(k=>`<tr><td style="font-size:12px;color:var(--text-muted)">${k.replace(/_/g,' ')}</td><td class="mono" style="text-align:right">${fmtL(al[k])}</td></tr>`).join('')}
+            <tr style="font-weight:600"><td>Total Assets</td><td class="mono" style="text-align:right;color:var(--green)">${fmtL(tA)}</td></tr>
+            <tr style="font-weight:600"><td>Total Liabilities</td><td class="mono" style="text-align:right;color:var(--red)">${fmtL(tL)}</td></tr>
+            <tr style="font-weight:700"><td>Net Worth</td><td class="mono" style="text-align:right;color:var(--accent);font-size:15px">${fmtL(tA-tL)}</td></tr>
+          </table>
+        </div>`;
+      }).join('')}
+    </div>`;
 
-  document.getElementById('nw-assets-table').innerHTML = `
-    <table class="tbl">${assetItems.map(([n,v])=>`<tr><td>${n}</td><td class="mono" style="text-align:right">${fmtL(v)}</td><td style="width:80px"><div class="progress-bar"><div class="progress-fill" style="width:${tAssets?(v/tAssets*100).toFixed(0):0}%"></div></div></td></tr>`).join('')}
-    <tr style="font-weight:600;border-top:2px solid var(--gray-200)"><td>Total Assets</td><td class="mono" style="text-align:right;color:var(--green)">${fmtL(tAssets)}</td><td></td></tr></table>`;
-
-  document.getElementById('nw-liab-table').innerHTML = liabItems.length ? `
-    <table class="tbl">${liabItems.map(([n,v])=>`<tr><td>${n}</td><td class="mono" style="text-align:right">${fmtL(v)}</td></tr>`).join('')}
-    <tr style="font-weight:600;border-top:2px solid var(--gray-200)"><td>Total Liabilities</td><td class="mono" style="text-align:right;color:var(--red)">${fmtL(tLiab)}</td></tr>
-    <tr style="font-weight:700"><td>Net Worth</td><td class="mono" style="text-align:right;color:var(--accent);font-size:16px">${fmtL(tAssets-tLiab)}</td></tr></table>`
-    : '<p style="color:var(--text-muted);font-size:13px;padding:12px">No liabilities recorded.</p>';
-
-  // Donut chart
-  if (allocChart) allocChart.destroy();
-  const ctx = document.getElementById('nw-alloc-chart');
-  if (!ctx || !assetItems.length) return;
-  const colors = ['#3B82F6','#F59E0B','#10B981','#6366F1','#8B5CF6','#6B7280','#9CA3AF','#D1D5DB'];
-  allocChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: { labels: assetItems.map(([n])=>n), datasets: [{ data: assetItems.map(([,v])=>v), backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
-    options: { responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{ legend:{ position:'right', labels:{ font:{size:12}, padding:12 } }, tooltip:{ callbacks:{ label: ctx => ctx.label+': '+fmtL(ctx.raw)+' ('+pct(ctx.raw,tAssets)+')' } } } }
+  // Combined donut
+  const combined = {};
+  members.forEach(m => {
+    const al = memberData[m.id]?.assets_liabilities || {};
+    assetKeys.forEach(k => combined[k] = (combined[k]||0)+(al[k]||0));
   });
+  const chartData = assetKeys.map((k,i)=>({label:k.replace(/_/g,' '),value:combined[k]||0,color:COLORS[i]})).filter(d=>d.value>0);
+  const tA = chartData.reduce((s,d)=>s+d.value,0);
+
+  if (nwChart) nwChart.destroy();
+  const ctx = document.getElementById('nw-chart');
+  if (ctx && chartData.length) {
+    nwChart = new Chart(ctx, {
+      type:'doughnut',
+      data:{labels:chartData.map(d=>d.label), datasets:[{data:chartData.map(d=>d.value),backgroundColor:chartData.map(d=>d.color),borderWidth:2,borderColor:'#fff'}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{
+        legend:{position:'right',labels:{font:{size:11},padding:10}},
+        tooltip:{callbacks:{label:ctx=>ctx.label+': '+fmtL(ctx.raw)+' ('+pct(ctx.raw,tA)+')'}}
+      }}
+    });
+  }
 }
 
 function renderClientCashFlow() {
-  const ie = currentClientData.income_expenses || {};
-  const totalIncome = (ie.primary_income||0)+(ie.secondary_income||0)+(ie.rental_income||0)+(ie.other_income||0);
-  const totalExp    = (ie.emi||0)+(ie.rent||0)+(ie.sip||0)+(ie.savings||0)+(ie.household||0)+(ie.transport||0)+(ie.lifestyle||0)+(ie.insurance_premium||0)+(ie.other_expenses||0);
-  const surplus     = totalIncome - totalExp;
+  const members    = currentFamilyData.members || [];
+  const memberData = currentFamilyData.member_data || {};
 
-  document.getElementById('cf-income').textContent   = fmtL(totalIncome);
-  document.getElementById('cf-expenses').textContent = fmtL(totalExp);
-  document.getElementById('cf-surplus').textContent  = fmtL(surplus);
-  document.getElementById('cf-surplus').className    = 'stat-value ' + (surplus>=0?'green':'red');
+  let tIncome=0, tExp=0;
+  const expBreakdown = {};
+  const perMember = [];
 
-  // Expense chart
-  const expItems = [
-    ['EMI', ie.emi], ['Rent', ie.rent], ['SIP/Invest', ie.sip],
-    ['Savings', ie.savings], ['Household', ie.household], ['Transport', ie.transport],
-    ['Lifestyle', ie.lifestyle], ['Insurance', ie.insurance_premium], ['Other', ie.other_expenses],
-  ].filter(([,v]) => v > 0);
+  members.forEach(m => {
+    const ie = memberData[m.id]?.income_expenses || {};
+    const inc = ['primary_income','secondary_income','rental_income','other_income'].reduce((s,k)=>s+(ie[k]||0),0);
+    const exp = ['emi','rent','sip','savings','household','transport','lifestyle','insurance_premium','other_expenses'].reduce((s,k)=>s+(ie[k]||0),0);
+    tIncome += inc; tExp += exp;
+    ['emi','rent','sip','savings','household','transport','lifestyle','insurance_premium','other_expenses'].forEach(k=>{
+      expBreakdown[k] = (expBreakdown[k]||0)+(ie[k]||0);
+    });
+    perMember.push({name:m.name, income:inc, expenses:exp, surplus:inc-exp});
+  });
 
-  if (expenseChart) expenseChart.destroy();
-  const ctx = document.getElementById('cf-expense-chart');
-  if (ctx && expItems.length) {
-    const colors = ['#3B82F6','#F59E0B','#10B981','#EF4444','#6366F1','#F97316','#8B5CF6','#14B8A6','#6B7280'];
-    expenseChart = new Chart(ctx, {
-      type: 'doughnut',
-      data: { labels: expItems.map(([n])=>n), datasets: [{ data: expItems.map(([,v])=>v), backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
-      options: { responsive:true, maintainAspectRatio:false, cutout:'55%', plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, padding:8 } }, tooltip:{ callbacks:{ label: ctx => ctx.label+': '+fmtL(ctx.raw) } } } }
+  document.getElementById('cf-income').textContent   = fmtL(tIncome);
+  document.getElementById('cf-expenses').textContent = fmtL(tExp);
+  document.getElementById('cf-surplus').textContent  = fmtL(tIncome-tExp);
+  document.getElementById('cf-surplus').className    = 'stat-value '+(tIncome-tExp>=0?'green':'red');
+
+  // Expense donut
+  const expData = Object.entries(expBreakdown).filter(([,v])=>v>0)
+    .map(([k,v],i)=>({label:k.replace(/_/g,' '),value:v,color:COLORS[i]}));
+
+  if (cfChart) cfChart.destroy();
+  const ctx = document.getElementById('cf-chart');
+  if (ctx && expData.length) {
+    cfChart = new Chart(ctx, {
+      type:'doughnut',
+      data:{labels:expData.map(d=>d.label),datasets:[{data:expData.map(d=>d.value),backgroundColor:expData.map(d=>d.color),borderWidth:2,borderColor:'#fff'}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{
+        legend:{position:'bottom',labels:{font:{size:11},padding:8}},
+        tooltip:{callbacks:{label:ctx=>ctx.label+': '+fmtL(ctx.raw)}}
+      }}
     });
   }
 
-  // Details table
-  document.getElementById('cf-details').innerHTML = `
-    <div class="section-label" style="margin-bottom:10px">Income Sources</div>
-    ${ie.primary_income ? `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);font-size:13px"><span>Primary salary</span><span class="mono" style="color:var(--green)">${fmtL(ie.primary_income)}</span></div>` : ''}
-    ${ie.secondary_income ? `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);font-size:13px"><span>Secondary salary</span><span class="mono" style="color:var(--green)">${fmtL(ie.secondary_income)}</span></div>` : ''}
-    ${ie.rental_income ? `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);font-size:13px"><span>Rental income</span><span class="mono" style="color:var(--green)">${fmtL(ie.rental_income)}</span></div>` : ''}
-    <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;font-weight:600;border-top:1px solid var(--gray-200);margin-top:4px"><span>Total Income</span><span class="mono" style="color:var(--green)">${fmtL(totalIncome)}</span></div>
-    <div class="divider"></div>
-    <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;font-weight:600"><span>Total Expenses</span><span class="mono" style="color:var(--red)">${fmtL(totalExp)}</span></div>
-    <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:15px;font-weight:700;border-top:2px solid var(--gray-200);margin-top:4px"><span>Surplus</span><span class="mono" style="color:${surplus>=0?'var(--green)':'var(--red)'}">${fmtL(surplus)}</span></div>`;
+  // Per-member breakdown
+  document.getElementById('cf-per-member').innerHTML = perMember.map(m=>`
+    <div style="padding:12px 0;border-bottom:1px solid var(--gray-100)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div style="width:28px;height:28px;border-radius:50%;background:${avatarColor(m.name)};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${inits(m.name)}</div>
+        <span style="font-weight:600;font-size:13px">${m.name}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div style="text-align:center;background:rgba(16,185,129,.07);border-radius:7px;padding:8px">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Income</div>
+          <div class="mono" style="font-size:13px;font-weight:600;color:var(--green)">${fmtL(m.income)}</div>
+        </div>
+        <div style="text-align:center;background:rgba(239,68,68,.07);border-radius:7px;padding:8px">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Expenses</div>
+          <div class="mono" style="font-size:13px;font-weight:600;color:var(--red)">${fmtL(m.expenses)}</div>
+        </div>
+        <div style="text-align:center;background:rgba(59,130,246,.07);border-radius:7px;padding:8px">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Surplus</div>
+          <div class="mono" style="font-size:13px;font-weight:600;color:${m.surplus>=0?'var(--green)':'var(--red)'}">${fmtL(m.surplus)}</div>
+        </div>
+      </div>
+    </div>`).join('');
 }
 
 function renderClientPlan() {
-  const plan = currentClientData._plan;
+  const plan = currentFamilyData._plan;
   const el   = document.getElementById('cl-plan-content');
   if (!plan?.plan) return;
-  el.innerHTML = `<div class="card"><div class="card-title">Your Financial Plan <span class="card-sub">Updated ${plan.updated_at||''}</span></div><div class="plan-output">${formatPlan(plan.plan)}</div></div>`;
+  el.innerHTML = `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div><div class="card-title" style="margin:0">Family Financial Plan</div>
+        <div class="card-sub">Updated ${plan.updated_at||''}</div></div>
+    </div>
+    <div class="plan-output">${formatPlan(plan.plan)}</div>
+  </div>`;
 }
-// ================================================================
-//  MOBILE: SIDEBAR + BOTTOM NAV
-// ================================================================
-function toggleSidebar() {
-  const sb = document.getElementById("sidebar");
-  const ov = document.getElementById("sidebar-overlay");
-  const isOpen = sb.classList.contains("open");
-  sb.classList.toggle("open", !isOpen);
-  ov.classList.toggle("open", !isOpen);
-  document.body.style.overflow = isOpen ? "" : "hidden";
-}
-
-function closeSidebar() {
-  document.getElementById("sidebar").classList.remove("open");
-  document.getElementById("sidebar-overlay").classList.remove("open");
-  document.body.style.overflow = "";
-}
-
-function setBottomNav(el) {
-  document.querySelectorAll(".bottom-nav-item").forEach(b => b.classList.remove("active"));
-  el.classList.add("active");
-}
-
-// Close sidebar on nav item click on mobile
-document.querySelectorAll(".nav-item").forEach(item => {
-  item.addEventListener("click", () => {
-    if (window.innerWidth <= 768) closeSidebar();
-  });
-});
-
-// Show/hide bottom nav based on role
-const _origInitApp = initApp;
-window.initApp = function() {
-  _origInitApp();
-  if (auth.role === "client") {
-    document.getElementById("bottom-nav").classList.add("client-visible");
-  }
-};
-
 </script>
 </body>
 </html>
