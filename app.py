@@ -856,25 +856,35 @@ def upload_cas(family_id, member_id):
             tmp.write(pdf_bytes)
             tmp_path = tmp.name
 
-        result = casparser.read_cas_pdf(tmp_path, password or "")
+        # output="json" returns a JSON string — avoids Pydantic model handling
+        json_str = casparser.read_cas_pdf(tmp_path, password or "", output="json")
         os.unlink(tmp_path)
+        # casparser serialises dates as "YYYY-MM-DD" strings in JSON output — safe to parse directly
+        result = json.loads(json_str)
     except Exception as e:
-        return jsonify({"error": f"Failed to parse CAS: {str(e)}"}), 400
+        try: os.unlink(tmp_path)
+        except: pass
+        err_msg = str(e)
+        if "password" in err_msg.lower() or "decrypt" in err_msg.lower():
+            return jsonify({"error": "Incorrect PDF password. Please check and try again."}), 400
+        if "encrypted" in err_msg.lower():
+            return jsonify({"error": "PDF is password-protected. Please enter the correct password."}), 400
+        return jsonify({"error": f"Failed to parse CAS: {err_msg}"}), 400
 
     # Process parsed data — compute XIRR and detect SIPs
-    cas_type = result.get("file_type", "UNKNOWN")
-    folios   = result.get("folios", [])
+    cas_type = result.get("file_type") or "UNKNOWN"
+    folios   = result.get("folios") or []
     schemes  = []
 
     for folio in folios:
-        amc = folio.get("amc", "")
-        for scheme in folio.get("schemes", []):
-            valuation   = scheme.get("valuation", {})
-            transactions = scheme.get("transactions", [])
-            current_val  = valuation.get("value", 0) or 0
-            cost_val     = valuation.get("cost", 0) or 0
-            val_date     = str(valuation.get("date", ""))
-            units        = scheme.get("close", 0) or 0
+        amc = folio.get("amc") or ""
+        for scheme in (folio.get("schemes") or []):
+            valuation    = scheme.get("valuation") or {}
+            transactions = scheme.get("transactions") or []
+            current_val  = float(valuation.get("value") or 0)
+            cost_val     = float(valuation.get("cost") or 0)
+            val_date     = str(valuation.get("date") or "")
+            units        = float(scheme.get("close") or 0)
 
             scheme_xirr  = compute_scheme_xirr(transactions, current_val, val_date) if current_val else None
             sip_amount   = detect_sip_amount(transactions)
