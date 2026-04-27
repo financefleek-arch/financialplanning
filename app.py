@@ -483,22 +483,27 @@ def upload_plan_pdf(family_id):
 
     now  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn = get_db()
-    existing = conn.execute(
-        "SELECT id FROM financial_plans WHERE family_id=?", (family_id,)
-    ).fetchone()
-    if existing:
-        conn.execute(
-            "UPDATE financial_plans SET pdf_data=?, plan=NULL, plan_type='pdf', updated_at=? WHERE family_id=?",
-            (pdf_data, now, family_id)
-        )
-    else:
-        conn.execute(
-            "INSERT INTO financial_plans (id,family_id,pdf_data,plan_type,created_at,updated_at) VALUES (?,?,?,'pdf',?,?)",
-            (str(uuid.uuid4()), family_id, pdf_data, now, now)
-        )
-    conn.commit()
-    conn.close()
-    return jsonify({"status": "success", "message": f"{filename} uploaded!", "updated_at": now})
+    try:
+        existing = conn.execute(
+            "SELECT id FROM financial_plans WHERE family_id=?", (family_id,)
+        ).fetchone()
+        if existing:
+            conn.execute(
+                "UPDATE financial_plans SET pdf_data=?, plan='', plan_type='pdf', updated_at=? WHERE family_id=?",
+                (pdf_data, now, family_id)
+            )
+        else:
+            conn.execute(
+                "INSERT INTO financial_plans (id,family_id,plan,pdf_data,plan_type,created_at,updated_at) VALUES (?,?,?,?,'pdf',?,?)",
+                (str(uuid.uuid4()), family_id, '', pdf_data, now, now)
+            )
+        conn.commit()
+        return jsonify({"status": "success", "message": f"{filename} uploaded!", "updated_at": now})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Upload failed: {str(e)}"}), 500
+    finally:
+        conn.close()
 
 @app.route("/api/families/<family_id>/plan/generate", methods=["POST"])
 def generate_family_plan(family_id):
