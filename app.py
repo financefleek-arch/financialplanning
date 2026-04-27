@@ -29,14 +29,31 @@ if not ANTHROPIC_KEY:
 if not ADVISOR_USER or not ADVISOR_PASS:
     raise RuntimeError("ADVISOR_USER and ADVISOR_PASS environment variables must be set")
 
+# Simple in-memory rate limiter for login — max 10 attempts per IP per minute
+from collections import defaultdict
+_login_attempts = defaultdict(list)
+
+def check_rate_limit(ip):
+    now = datetime.now()
+    cutoff = now - timedelta(minutes=1)
+    _login_attempts[ip] = [t for t in _login_attempts[ip] if t > cutoff]
+    if len(_login_attempts[ip]) >= 10:
+        return False
+    _login_attempts[ip].append(now)
+    return True
+
 # ---- DATABASE ----
 def get_db():
     db_dir = os.path.dirname(DB_PATH)
     if db_dir:
         os.makedirs(db_dir, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=15)  # wait up to 15s on lock
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA journal_mode = WAL")    # concurrent reads, safe writes
+    conn.execute("PRAGMA synchronous = NORMAL")  # faster writes, still crash-safe
+    conn.execute("PRAGMA cache_size = -4000")    # 4MB page cache
+    conn.execute("PRAGMA busy_timeout = 10000")  # 10s busy timeout at SQLite level
     return conn
 
 def init_db():
@@ -54,6 +71,9 @@ def init_db():
             expires    TEXT NOT NULL
         )
     """)
+    # Index for fast session lookups and cleanup
+    c.execute("CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_sessions_token   ON sessions(token)")
 
     # Families
     c.execute("""
@@ -68,18 +88,25 @@ def init_db():
     # Family members — each has their own login
     c.execute("""
         CREATE TABLE IF NOT EXISTS family_members (
-            id            TEXT PRIMARY KEY,
-            family_id     TEXT NOT NULL,
-            name          TEXT NOT NULL,
-            email         TEXT UNIQUE NOT NULL,
-            phone         TEXT,
-            role          TEXT DEFAULT 'member',
-            password_hash TEXT NOT NULL,
-            created_at    TEXT,
-            updated_at    TEXT,
+            id                   TEXT PRIMARY KEY,
+            family_id            TEXT NOT NULL,
+            name                 TEXT NOT NULL,
+            email                TEXT UNIQUE NOT NULL,
+            phone                TEXT,
+            role                 TEXT DEFAULT 'member',
+            password_hash        TEXT NOT NULL,
+            allow_password_change INTEGER DEFAULT 1,
+            created_at           TEXT,
+            updated_at           TEXT,
             FOREIGN KEY (family_id) REFERENCES families(id)
         )
     """)
+
+    # Migration: add allow_password_change to existing DBs
+    try:
+        c.execute("ALTER TABLE family_members ADD COLUMN allow_password_change INTEGER DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass  # column already exists
 
     # Per-member data: income_expenses, assets_liabilities, insurance, risk_profile
     c.execute("""
@@ -152,6 +179,9 @@ def create_session(username, role, family_id=None, member_id=None):
     token   = secrets.token_hex(32)
     expires = (datetime.now() + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
     conn    = get_db()
+    # Clean up expired sessions on every login — keeps the table small
+    conn.execute("DELETE FROM sessions WHERE expires < ?",
+                 (datetime.now().strftime("%Y-%m-%d %H:%M:%S"),))
     conn.execute(
         "INSERT INTO sessions (token, username, role, family_id, member_id, expires) VALUES (?,?,?,?,?,?)",
         (token, username, role, family_id, member_id, expires)
@@ -164,18 +194,21 @@ def get_session():
     token = request.headers.get("X-Auth-Token")
     if not token:
         return None
-    conn = get_db()
     try:
-        session = conn.execute("SELECT * FROM sessions WHERE token = ?", (token,)).fetchone()
-        if not session:
-            return None
-        if datetime.now() > datetime.strptime(session["expires"], "%Y-%m-%d %H:%M:%S"):
-            conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
-            conn.commit()
-            return None
-        return dict(session)
-    finally:
-        conn.close()
+        conn = get_db()
+        try:
+            session = conn.execute("SELECT * FROM sessions WHERE token = ?", (token,)).fetchone()
+            if not session:
+                return None
+            if datetime.now() > datetime.strptime(session["expires"], "%Y-%m-%d %H:%M:%S"):
+                conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
+                conn.commit()
+                return None
+            return dict(session)
+        finally:
+            conn.close()
+    except sqlite3.OperationalError:
+        return None  # DB temporarily locked — treat as unauthenticated
 
 def require_auth(role=None):
     session = get_session()
@@ -190,6 +223,10 @@ def require_auth(role=None):
 # ================================================================
 @app.route("/api/login", methods=["POST"])
 def login():
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
+    if not check_rate_limit(ip):
+        return jsonify({"error": "Too many login attempts. Please wait a minute."}), 429
+
     data     = request.json
     username = data.get("username", "").strip().lower()
     password = data.get("password", "")
@@ -208,7 +245,8 @@ def login():
         return jsonify({
             "status":"success","token":token,"role":"client",
             "name":member["name"],"username":member["email"],
-            "family_id":member["family_id"],"member_id":member["id"]
+            "family_id":member["family_id"],"member_id":member["id"],
+            "allow_password_change": bool(member["allow_password_change"])
         })
 
     return jsonify({"error": "Invalid username or password"}), 401
@@ -270,12 +308,14 @@ def create_family():
         conn.execute("INSERT INTO families (id,name,created_at,updated_at) VALUES (?,?,?,?)",
                      (family_id, family_name, now, now))
         for m in members:
+            allow_pw = 0 if not m.get("allow_password_change", True) else 1
             conn.execute(
-                "INSERT INTO family_members (id,family_id,name,email,phone,role,password_hash,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO family_members (id,family_id,name,email,phone,role,password_hash,allow_password_change,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
                 (str(uuid.uuid4()), family_id,
                  m.get("name","").strip(), m.get("email","").strip().lower(),
                  m.get("phone","").strip(), m.get("role","member"),
-                 generate_password_hash(m.get("password","")), now, now)
+                 generate_password_hash(m.get("password","")),
+                 allow_pw, now, now)
             )
         conn.commit()
         return jsonify({"status":"success","family_id":family_id,"message":f"{family_name} created!"})
@@ -299,7 +339,7 @@ def get_family(family_id):
         conn.close()
         return jsonify({"error":"Family not found"}), 404
     members = conn.execute(
-        "SELECT id,name,email,phone,role FROM family_members WHERE family_id=? ORDER BY role DESC",
+        "SELECT id,name,email,phone,role,allow_password_change FROM family_members WHERE family_id=? ORDER BY role DESC",
         (family_id,)
     ).fetchall()
     conn.close()
@@ -326,11 +366,12 @@ def add_member(family_id):
     mid  = str(uuid.uuid4())
     conn = get_db()
     try:
+        allow_pw = 0 if not data.get("allow_password_change", True) else 1
         conn.execute(
-            "INSERT INTO family_members (id,family_id,name,email,phone,role,password_hash,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO family_members (id,family_id,name,email,phone,role,password_hash,allow_password_change,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
             (mid, family_id, data.get("name","").strip(), data.get("email","").strip().lower(),
              data.get("phone","").strip(), data.get("role","member"),
-             generate_password_hash(data.get("password","")), now, now)
+             generate_password_hash(data.get("password","")), allow_pw, now, now)
         )
         conn.commit()
         return jsonify({"status":"success","member_id":mid})
@@ -356,22 +397,23 @@ def edit_member(family_id, member_id):
         conn.close()
         return jsonify({"error": "Member not found"}), 404
 
-    name  = data.get("name",  member["name"]).strip()
-    email = data.get("email", member["email"]).strip().lower()
-    phone = data.get("phone", member["phone"] or "").strip()
-    role  = data.get("role",  member["role"])
+    name     = data.get("name",  member["name"]).strip()
+    email    = data.get("email", member["email"]).strip().lower()
+    phone    = data.get("phone", member["phone"] or "").strip()
+    role     = data.get("role",  member["role"])
+    allow_pw = 0 if not data.get("allow_password_change", True) else 1
     new_password = data.get("password", "").strip()
 
     try:
         if new_password:
             conn.execute(
-                "UPDATE family_members SET name=?,email=?,phone=?,role=?,password_hash=?,updated_at=? WHERE id=?",
-                (name, email, phone, role, generate_password_hash(new_password), now, member_id)
+                "UPDATE family_members SET name=?,email=?,phone=?,role=?,password_hash=?,allow_password_change=?,updated_at=? WHERE id=?",
+                (name, email, phone, role, generate_password_hash(new_password), allow_pw, now, member_id)
             )
         else:
             conn.execute(
-                "UPDATE family_members SET name=?,email=?,phone=?,role=?,updated_at=? WHERE id=?",
-                (name, email, phone, role, now, member_id)
+                "UPDATE family_members SET name=?,email=?,phone=?,role=?,allow_password_change=?,updated_at=? WHERE id=?",
+                (name, email, phone, role, allow_pw, now, member_id)
             )
         conn.commit()
         return jsonify({"status": "success", "message": f"{name} updated!"})
@@ -421,6 +463,10 @@ def change_password(member_id):
         conn.close()
         return jsonify({"error": "Current password is incorrect"}), 400
 
+    if not member["allow_password_change"]:
+        conn.close()
+        return jsonify({"error": "Password changes are disabled for your account. Please contact your advisor."}), 403
+
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn.execute(
         "UPDATE family_members SET password_hash=?,updated_at=? WHERE id=?",
@@ -455,7 +501,7 @@ def get_family_data(family_id):
         "SELECT section,data FROM family_data WHERE family_id=?", (family_id,)
     ).fetchall()
     members = conn.execute(
-        "SELECT id,name,email,role FROM family_members WHERE family_id=? ORDER BY role DESC",
+        "SELECT id,name,email,role,allow_password_change FROM family_members WHERE family_id=? ORDER BY role DESC",
         (family_id,)
     ).fetchall()
     conn.close()

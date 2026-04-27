@@ -484,20 +484,25 @@ input,select,textarea{font-family:inherit;outline:none}
 
           <div class="card">
             <div class="card-title">Change Password</div>
-            <div class="form-group" style="margin-bottom:14px">
-              <label>Current Password</label>
-              <input type="password" id="cp-current" placeholder="Enter current password" autocomplete="current-password">
+            <div id="cp-disabled-msg" style="display:none;padding:16px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;font-size:13px;color:var(--amber)">
+              Password changes have been disabled for your account by your advisor. Please contact them if you need to update your password.
             </div>
-            <div class="form-group" style="margin-bottom:14px">
-              <label>New Password</label>
-              <input type="password" id="cp-new" placeholder="At least 6 characters" autocomplete="new-password">
+            <div id="cp-form">
+              <div class="form-group" style="margin-bottom:14px">
+                <label>Current Password</label>
+                <input type="password" id="cp-current" placeholder="Enter current password" autocomplete="current-password">
+              </div>
+              <div class="form-group" style="margin-bottom:14px">
+                <label>New Password</label>
+                <input type="password" id="cp-new" placeholder="At least 6 characters" autocomplete="new-password">
+              </div>
+              <div class="form-group" style="margin-bottom:20px">
+                <label>Confirm New Password</label>
+                <input type="password" id="cp-confirm" placeholder="Repeat new password" autocomplete="new-password">
+              </div>
+              <div id="cp-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--red);font-size:13px;padding:10px 12px;border-radius:7px;margin-bottom:14px"></div>
+              <button class="btn btn-blue" id="cp-btn" onclick="submitChangePassword()" style="width:100%">Update Password</button>
             </div>
-            <div class="form-group" style="margin-bottom:20px">
-              <label>Confirm New Password</label>
-              <input type="password" id="cp-confirm" placeholder="Repeat new password" autocomplete="new-password">
-            </div>
-            <div id="cp-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--red);font-size:13px;padding:10px 12px;border-radius:7px;margin-bottom:14px"></div>
-            <button class="btn btn-blue" id="cp-btn" onclick="submitChangePassword()" style="width:100%">Update Password</button>
           </div>
         </div>
       </div>
@@ -557,6 +562,10 @@ input,select,textarea{font-family:inherit;outline:none}
       <label>New Password <span style="color:var(--text-muted);font-weight:400">(leave blank to keep current)</span></label>
       <input type="password" id="em-pass" placeholder="Enter new password to reset">
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted);cursor:pointer;margin-top:12px">
+      <input type="checkbox" id="em-allow-pw" checked style="width:15px;height:15px;accent-color:var(--accent)">
+      Allow client to change their own password
+    </label>
     <div id="em-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--red);font-size:13px;padding:10px 12px;border-radius:7px;margin-top:12px"></div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-edit-member')">Cancel</button>
@@ -660,9 +669,16 @@ function showPage(id) {
   const titles = {
     'dashboard':'Dashboard','families':'Families',
     'family-detail': document.getElementById('detail-family-name')?.textContent || 'Family',
-    'cl-overview':'Overview','cl-networth':'Net Worth','cl-cashflow':'Cash Flow','cl-plan':'Financial Plan'
+    'cl-overview':'Overview','cl-networth':'Net Worth','cl-cashflow':'Cash Flow',
+    'cl-plan':'Financial Plan','cl-settings':'Settings'
   };
   document.getElementById('topbar-title').textContent = titles[id] || id;
+  // Toggle settings form based on permission
+  if (id === 'cl-settings') {
+    const allowed = auth.allowPasswordChange !== false;
+    document.getElementById('cp-form').style.display        = allowed ? '' : 'none';
+    document.getElementById('cp-disabled-msg').style.display = allowed ? 'none' : '';
+  }
   if (window.innerWidth <= 768) closeSidebar();
 }
 
@@ -711,7 +727,8 @@ async function doLogin() {
   if (!res||res.error) { err.textContent=res?.error||'Login failed'; err.classList.add('show'); return; }
   err.classList.remove('show');
   auth = {token:res.token, role:res.role, name:res.name,
-          familyId:res.family_id||null, memberId:res.member_id||null};
+          familyId:res.family_id||null, memberId:res.member_id||null,
+          allowPasswordChange: res.allow_password_change !== false};
   localStorage.setItem('fleek_auth', JSON.stringify(auth));
   initApp();
 }
@@ -752,6 +769,9 @@ function initApp() {
     document.getElementById('advisor-nav').style.display = 'none';
     document.getElementById('client-nav').style.display = '';
     document.getElementById('bottom-nav').classList.add('show');
+    // Hide settings nav if password change is disabled
+    const settingsNavItems = document.querySelectorAll('[data-page="cl-settings"]');
+    settingsNavItems.forEach(el => el.style.display = auth.allowPasswordChange ? '' : 'none');
     // Hide topbar on mobile for clients — top nav replaces it
     if (window.innerWidth <= 768) {
       document.querySelector('.topbar').style.display = 'none';
@@ -872,6 +892,10 @@ function addMemberRow(role='member') {
       <div class="form-group"><label>Phone</label><input type="tel" id="mr-phone-${i}" placeholder="+91 9876543210"></div>
       <div class="form-group"><label>Password *</label><input type="password" id="mr-pass-${i}" placeholder="Set login password"></div>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted);cursor:pointer;margin-top:4px">
+      <input type="checkbox" id="mr-allow-pw-${i}" checked style="width:15px;height:15px;accent-color:var(--accent)">
+      Allow client to change their own password
+    </label>
     <input type="hidden" id="mr-role-${i}" value="${role}">`;
   document.getElementById('member-rows').appendChild(div);
 }
@@ -888,7 +912,8 @@ async function submitCreateFamily() {
     const p = document.getElementById(`mr-pass-${i}`)?.value;
     const ph= document.getElementById(`mr-phone-${i}`)?.value.trim();
     const r = document.getElementById(`mr-role-${i}`)?.value;
-    if (n && e && p) members.push({name:n,email:e,phone:ph,password:p,role:r});
+    if (n && e && p) members.push({name:n, email:e, phone:ph, password:p, role:r,
+        allow_password_change: document.getElementById(`mr-allow-pw-${i}`)?.checked !== false});
   });
 
   if (!members.length) { toast('At least one member required','error'); return; }
@@ -1631,35 +1656,41 @@ function renderMembersTab(el, members) {
       <button class="btn btn-blue btn-sm" onclick="openAddMemberModal()">+ Add Member</button>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      ${members.map(m => `
+      ${members.map(m => {
+        const allowPw = m.allow_password_change !== 0 && m.allow_password_change !== false;
+        return `
         <div class="card" style="padding:16px 20px">
           <div style="display:flex;align-items:center;gap:14px">
             <div style="width:42px;height:42px;border-radius:50%;background:${avatarColor(m.name)};color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${inits(m.name)}</div>
             <div style="flex:1;min-width:0">
               <div style="font-weight:600;font-size:14px">${m.name}
                 <span class="badge ${m.role==='primary'?'badge-blue':'badge-gray'}" style="margin-left:6px">${m.role==='primary'?'Primary':'Member'}</span>
+                <span class="badge ${allowPw?'badge-green':'badge-red'}" style="margin-left:4px;font-size:10px">${allowPw?'PW change on':'PW change off'}</span>
               </div>
-              <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${m.email} ${m.phone?'· '+m.phone:''}</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${m.email}${m.phone?' · '+m.phone:''}</div>
             </div>
             <div style="display:flex;gap:8px;flex-shrink:0">
-              <button class="btn btn-outline btn-sm" onclick="openEditMember('${m.id}','${m.name.replace(/'/g,"\\'")}','${m.email}','${m.phone||''}','${m.role}')">Edit</button>
+              <button class="btn btn-outline btn-sm" onclick="openEditMember('${m.id}','${m.name.replace(/'/g,"\\'")}','${m.email}','${m.phone||''}','${m.role}',${allowPw})">Edit</button>
               <button class="btn btn-danger btn-sm" onclick="deleteMemberFromTab('${m.id}','${m.name.replace(/'/g,"\\'")}')">Remove</button>
             </div>
           </div>
-        </div>`).join('')}
+        </div>`;
+      }).join('')}
     </div>`;
 }
 
 let editingMemberId = null;
 
-function openEditMember(memberId, name, email, phone, role) {
+function openEditMember(memberId, name, email, phone, role, allowPw) {
   editingMemberId = memberId;
   document.getElementById('em-name').value  = name;
   document.getElementById('em-email').value = email;
   document.getElementById('em-phone').value = phone;
   document.getElementById('em-role').value  = role;
   document.getElementById('em-pass').value  = '';
+  document.getElementById('em-allow-pw').checked = allowPw !== '0' && allowPw !== false;
   document.getElementById('em-error').style.display = 'none';
+  document.getElementById('modal-edit-member-title').textContent = 'Edit Member';
   openModal('modal-edit-member');
 }
 
@@ -1673,7 +1704,8 @@ async function submitEditMember() {
 
   if (!name || !email) { errEl.textContent='Name and email are required'; errEl.style.display='block'; return; }
 
-  const body = { name, email, phone, role };
+  const body = { name, email, phone, role,
+                 allow_password_change: document.getElementById('em-allow-pw').checked };
   if (pass) {
     if (pass.length < 6) { errEl.textContent='Password must be at least 6 characters'; errEl.style.display='block'; return; }
     body.password = pass;
