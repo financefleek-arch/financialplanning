@@ -564,8 +564,16 @@ input,select,textarea{font-family:inherit;outline:none}
       <div class="modal-title">Upload CAS — <span id="cas-member-name"></span></div>
       <button class="btn-close" onclick="closeModal('modal-cas-upload')">×</button>
     </div>
-    <div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:13px;color:var(--text-muted);line-height:1.5">
-      Upload a <strong>CAMS or KFintech CAS PDF</strong>. The PDF is password-protected — enter the password you set when requesting the statement.
+    <div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:13px;color:var(--text-muted);line-height:1.6">
+      <div style="font-weight:600;color:var(--text);margin-bottom:8px">How to get the correct CAS PDF</div>
+      <div style="margin-bottom:4px">1. Go to <strong><a href="https://www.camsonline.com/Investors/Statements/Consolidated-Account-Statement" target="_blank" style="color:var(--accent)">camsonline.com</a></strong> or <strong><a href="https://mfs.kfintech.com/investor/General/ConsolidatedAccountStatement" target="_blank" style="color:var(--accent)">kfintech.com</a></strong></div>
+      <div style="margin-bottom:4px">2. Statement type → <strong>Detailed</strong></div>
+      <div style="margin-bottom:4px">3. Period → <strong>Since Inception</strong> &nbsp;·&nbsp; Folios → <strong>With zero balance folios</strong></div>
+      <div style="margin-bottom:10px">4. Enter registered email + create a PDF password → submit → PDF arrives by email</div>
+      <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--red)">
+        ⚠️ <strong>Do NOT upload a CDSL or NSDL CAS</strong> — those are demat statements and are not supported.<br>
+        Only CAMS/KFintech MF statements work. If your PDF has a CDSL or NSDL logo, request a fresh one from CAMS/KFintech.
+      </div>
     </div>
     <div class="form-group" style="margin-bottom:14px">
       <label>CAS PDF File *</label>
@@ -1875,7 +1883,10 @@ async function renderAdvisorMF(el, members) {
 
   results.forEach(({ member, data }) => {
     if (!data) return;
-    data.schemes.forEach(s => combinedSchemes.push({ ...s, member_name: member.name }));
+    data.schemes.forEach(s => {
+      if ((s.current_value || 0) > 0 || (s.units || 0) > 0)
+        combinedSchemes.push({ ...s, member_name: member.name });
+    });
     totalValue += data.summary.total_value || 0;
     totalCost  += data.summary.total_cost  || 0;
     totalSip   += data.summary.total_sip   || 0;
@@ -2091,7 +2102,7 @@ async function loadClientMF() {
     totalValue += data.summary.total_value || 0;
     totalCost  += data.summary.total_cost  || 0;
     totalSip   += data.summary.total_sip   || 0;
-    data.schemes.forEach(s => allSchemes.push({...s, member_name: member.name}));
+    data.schemes.forEach(s => { if ((s.current_value || 0) > 0 || (s.units || 0) > 0) allSchemes.push({...s, member_name: member.name}); });
   });
 
   el.innerHTML = `
@@ -2137,6 +2148,8 @@ function switchMFMember(memberId, el) {
 }
 
 function renderSchemesTable(schemes, fmtXirr, xirrColor, gainColor) {
+  // Filter out zero-balance schemes
+  schemes = schemes.filter(s => (s.current_value || 0) > 0 || (s.units || 0) > 0);
   if (!schemes.length) return '<div class="empty" style="padding:30px"><p>No holdings data</p></div>';
 
   // Group by AMC

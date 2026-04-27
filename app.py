@@ -962,7 +962,7 @@ def upload_cas(family_id, member_id):
         amc = folio.get("amc") or ""
         print(f"[FOLIO] AMC={amc} | schemes={len(folio.get('schemes') or [])} | folio={folio.get('folio','')}")
         for scheme in (folio.get("schemes") or []):
-            print(f"[SCHEME] {scheme.get('scheme','')[:40]} | close={scheme.get('close')} | valuation={scheme.get('valuation')}")
+            print(f"[SCHEME] {scheme.get('scheme','')[:40]} | close={scheme.get('close')} | txns={len(scheme.get('transactions') or [])} | valuation={scheme.get('valuation')}")
             try:
                 valuation    = scheme.get("valuation") or {}
                 transactions = scheme.get("transactions") or []
