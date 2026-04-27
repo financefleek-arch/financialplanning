@@ -852,7 +852,14 @@ def detect_sip_amount(transactions):
         tdesc_upper = tdesc.upper()
         amount      = float(txn.get("amount") or 0)
 
-        if any(k in tdesc_upper for k in ["INVALID", "FAILED", "REVERSED", "REJECTED", "CANCELLED"]):
+        is_merged_blob = len(tdesc) > 100 and '\t\t' in tdesc
+
+        # For normal descriptions, skip if starts with invalid/failed marker
+        # For merged blobs, don't skip — valid SIP data follows the invalid header
+        if not is_merged_blob:
+            desc_start = tdesc_upper[:60]
+            if any(k in desc_start for k in ["INVALID", "FAILED", "REVERSED", "REJECTED"]):
+                continue
             continue
 
         type_is_sip = any(k in ttype for k in [
@@ -870,7 +877,7 @@ def detect_sip_amount(transactions):
 
         # casparser sometimes merges rows — amount field gets stamp duty (<=1)
         # while actual SIP amount is embedded in description text
-        if 0 < amount <= 1 and len(tdesc) > 100:
+        if is_merged_blob and 0 < amount <= 1:
             extracted = extract_amounts_from_description(tdesc)
             sip_amounts.extend(extracted)
         elif amount > 1:
