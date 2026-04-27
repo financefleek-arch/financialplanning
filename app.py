@@ -810,18 +810,41 @@ def compute_scheme_xirr(transactions, current_value, valuation_date):
 
 
 def detect_sip_amount(transactions):
-    """Detect recurring SIP amount by finding the most common purchase amount."""
+    """Detect recurring SIP amount from transaction history."""
     from collections import Counter
     sip_amounts = []
+
     for txn in transactions:
-        ttype = (txn.get("type") or "").upper()
+        ttype  = (txn.get("type") or "").upper()
+        tdesc  = (txn.get("description") or txn.get("narration") or "").upper()
         amount = float(txn.get("amount") or 0)
-        if "SIP" in ttype or ("PURCHASE" in ttype and amount > 0):
-            sip_amounts.append(round(amount / 100) * 100)  # round to nearest 100
+
+        if amount <= 0:
+            continue
+
+        # Match on type field (casparser normalised values)
+        type_is_sip = any(k in ttype for k in [
+            "SIP", "SYSTEMATIC", "PURCHASE", "SWITCH_IN", "REINVEST"
+        ])
+        # Also match on description for CAMS/KFintech verbose descriptions
+        desc_is_sip = any(k in tdesc for k in [
+            "SYSTEMATIC INVESTMENT", "SYSTEMATIC PURCHASE",
+            "SIP PURCHASE", "SIP INSTALMENT",
+            "SYS. INVESTMENT", "SYS INVESTMENT",
+            "PURCHASE SIP", "INSTALMENT"
+        ])
+
+        if type_is_sip or desc_is_sip:
+            # Round to nearest 100 to group similar amounts (e.g. 999.95 → 1000)
+            rounded = round(amount / 100) * 100
+            if rounded > 0:
+                sip_amounts.append(rounded)
+
     if not sip_amounts:
         return None
-    most_common = Counter(sip_amounts).most_common(1)[0]
-    return most_common[0] if most_common[1] >= 2 else None  # only if seen ≥2 times
+
+    most_common, count = Counter(sip_amounts).most_common(1)[0]
+    return most_common if count >= 2 else None
 
 
 # ================================================================
@@ -877,6 +900,8 @@ def upload_cas(family_id, member_id):
             return jsonify({"error": "PDF is password-protected. Please enter the correct password."}), 400
         if "pymupdf" in err_msg.lower() or "mupdf" in err_msg.lower():
             return jsonify({"error": "Server missing PyMuPDF dependency. Add 'pymupdf' to requirements.txt and redeploy."}), 503
+        if "header" in err_msg.lower() or "parsing cas" in err_msg.lower():
+            return jsonify({"error": "This appears to be a CDSL or NSDL demat CAS — these are not supported. Please upload a Detailed CAS from CAMS (camsonline.com) or KFintech (kfintech.com) instead."}), 400
         return jsonify({"error": f"Failed to parse CAS: {err_msg}"}), 400
 
     # Process parsed data — compute XIRR and detect SIPs
@@ -896,6 +921,12 @@ def upload_cas(family_id, member_id):
 
             scheme_xirr  = compute_scheme_xirr(transactions, current_val, val_date) if current_val else None
             sip_amount   = detect_sip_amount(transactions)
+
+            # Debug: log first few transaction types to Railway logs
+            if transactions and not sip_amount:
+                sample_types = [(t.get("type",""), t.get("description","")[:40] if t.get("description") else "") 
+                               for t in transactions[:3]]
+                print(f"[SIP DEBUG] {scheme.get('scheme','')[:30]} — no SIP detected. Sample txn types: {sample_types}")
 
             gain     = (current_val - cost_val) if current_val and cost_val else None
             gain_pct = round((gain / cost_val * 100), 2) if gain and cost_val else None
