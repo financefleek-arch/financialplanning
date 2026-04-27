@@ -811,20 +811,24 @@ def compute_scheme_xirr(transactions, current_value, valuation_date):
 
 def extract_amounts_from_description(description):
     """
-    When casparser merges multiple rows into one description blob,
-    extract all INR amounts from the text (e.g. 4,999.75 or 14,999.25).
+    Extract SIP amounts from casparser merged-row description blobs.
+    Amounts appear as tab-separated values: \t\t4,999.75\t\t
+    We look for tab-delimited numbers to avoid matching instalment numbers like '2/600'.
     """
     import re
-    pattern = r'\b(\d{1,2},\d{2},\d{3}(?:\.\d{2})?|\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\b'
-    matches = re.findall(pattern, description)
     amounts = []
-    for m in matches:
-        try:
-            val = float(m.replace(',', ''))
-            if 500 <= val <= 500000:  # realistic SIP range
-                amounts.append(val)
-        except ValueError:
-            continue
+    # Split on tab sequences and examine each segment
+    segments = re.split(r'\t+|\n', description)
+    for seg in segments:
+        seg = seg.strip()
+        # Must be purely a number (possibly comma-formatted), nothing else
+        if re.fullmatch(r'\d{1,2},\d{2},\d{3}(?:\.\d{2})?|\d{1,3}(?:,\d{3})*\.\d{2}', seg):
+            try:
+                val = float(seg.replace(',', ''))
+                if 500 <= val <= 500000:
+                    amounts.append(val)
+            except ValueError:
+                continue
     return amounts
 
 
@@ -886,7 +890,7 @@ def detect_sip_amount(transactions):
     if not sip_amounts:
         return None
 
-    recent_sips = sip_amounts[-6:] if len(sip_amounts) >= 6 else sip_amounts
+    recent_sips = sip_amounts[-3:] if len(sip_amounts) >= 3 else sip_amounts
     most_common, count = Counter(recent_sips).most_common(1)[0]
     return most_common if count >= 2 else None
 
