@@ -493,8 +493,8 @@ input,select,textarea{font-family:inherit;outline:none}
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         My Plan
       </button>
-      <button class="bnav-item" onclick="doLogout()" style="color:rgba(239,68,68,.7)">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <button class="bnav-item" onclick="doLogout()" style="color:#fff;background:rgba(239,68,68,.75);border-radius:8px;margin:4px 6px;flex:0 0 auto;padding:6px 14px;min-width:unset;border-bottom:none">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         Sign out
       </button>
     </div>
@@ -969,22 +969,67 @@ function renderFamilySection(el, section, data, members, isFamily) {
 
 function renderAdvisorPlan(el) {
   const plan = currentFamilyData._plan;
-  if (!plan) {
-    el.innerHTML = `<div class="card"><div class="empty" style="padding:40px">
-      <div class="icon">📋</div><h3>No plan yet</h3>
-      <p style="margin-bottom:16px">Fill in member data across all sections then generate a plan.</p>
-      <button class="btn btn-blue" onclick="generatePlan()">Generate Plan Now</button>
-    </div></div>`;
-    return;
-  }
+  const hasPlan = plan && (plan.plan || plan.pdf_data);
+
   el.innerHTML = `<div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <div><div class="card-title" style="margin:0">Family Financial Plan</div>
-        <div class="card-sub">Generated ${plan.updated_at||''}</div></div>
-      <button class="btn btn-green btn-sm" onclick="generatePlan()">↻ Regenerate</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div class="card-title" style="margin:0">Family Financial Plan</div>
+        <div class="card-sub">${hasPlan ? `Last updated ${plan.updated_at||''}` : 'No plan yet'}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('pdf-upload-input').click()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload PDF
+        </button>
+        <button class="btn btn-green btn-sm" onclick="generatePlan()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          ${hasPlan ? '↻ Regenerate' : 'Generate with AI'}
+        </button>
+      </div>
     </div>
-    <div class="plan-output">${formatPlan(plan.plan)}</div>
+    <input type="file" id="pdf-upload-input" accept="application/pdf" style="display:none" onchange="handlePdfUpload(event)">
+
+    ${!hasPlan ? `
+      <div class="empty" style="padding:40px">
+        <div class="icon">📋</div>
+        <h3>No plan yet</h3>
+        <p style="margin-bottom:16px">Generate with AI or upload a PDF plan manually.</p>
+      </div>` :
+      plan.pdf_data ? `
+      <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:10px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+        <svg width="16" height="16" fill="none" stroke="var(--red)" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span style="font-size:13px;font-weight:500">PDF plan uploaded</span>
+        <span class="badge badge-green" style="margin-left:auto">Active</span>
+      </div>
+      <iframe src="${plan.pdf_data}" style="width:100%;height:700px;border:none;border-radius:8px"></iframe>` :
+      `<div class="plan-output">${formatPlan(plan.plan)}</div>`
+    }
   </div>`;
+}
+
+async function handlePdfUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.type !== 'application/pdf') { toast('Please upload a PDF file','error'); return; }
+  if (file.size > 10 * 1024 * 1024) { toast('PDF must be under 10MB','error'); return; }
+
+  toast('Uploading PDF…','info');
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const base64 = e.target.result; // data:application/pdf;base64,...
+    const res = await api(`/api/families/${currentFamilyId}/plan/upload`, {
+      method: 'POST',
+      body: { pdf_data: base64, filename: file.name }
+    });
+    if (res?.status === 'success') {
+      toast('PDF uploaded successfully!','success');
+      currentFamilyData._plan = { pdf_data: base64, updated_at: new Date().toLocaleString('en-IN') };
+      renderAdvisorPlan(document.getElementById('family-tab-content'));
+    } else toast(res?.error||'Upload failed','error');
+  };
+  reader.readAsDataURL(file);
+  event.target.value = ''; // reset input
 }
 
 function renderDataTable(section, d) {
@@ -1496,13 +1541,20 @@ function renderClientCashFlow() {
 function renderClientPlan() {
   const plan = currentFamilyData._plan;
   const el   = document.getElementById('cl-plan-content');
-  if (!plan?.plan) return;
+  if (!plan || (!plan.plan && !plan.pdf_data)) return;
   el.innerHTML = `<div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
       <div><div class="card-title" style="margin:0">Family Financial Plan</div>
         <div class="card-sub">Updated ${plan.updated_at||''}</div></div>
+      ${plan.pdf_data ? `<a href="${plan.pdf_data}" download="financial-plan.pdf" class="btn btn-outline btn-sm">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Download PDF
+      </a>` : ''}
     </div>
-    <div class="plan-output">${formatPlan(plan.plan)}</div>
+    ${plan.pdf_data
+      ? `<iframe src="${plan.pdf_data}" style="width:100%;height:700px;border:none;border-radius:8px"></iframe>`
+      : `<div class="plan-output">${formatPlan(plan.plan)}</div>`
+    }
   </div>`;
 }
 </script>

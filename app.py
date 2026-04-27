@@ -114,12 +114,21 @@ def init_db():
         CREATE TABLE IF NOT EXISTS financial_plans (
             id         TEXT PRIMARY KEY,
             family_id  TEXT NOT NULL,
-            plan       TEXT NOT NULL,
+            plan       TEXT,
+            pdf_data   TEXT,
+            plan_type  TEXT DEFAULT 'text',
             created_at TEXT,
             updated_at TEXT,
             FOREIGN KEY (family_id) REFERENCES families(id)
         )
     """)
+
+    # Migration: add pdf_data and plan_type columns if they don't exist
+    try:
+        c.execute("ALTER TABLE financial_plans ADD COLUMN pdf_data TEXT")
+        c.execute("ALTER TABLE financial_plans ADD COLUMN plan_type TEXT DEFAULT 'text'")
+    except sqlite3.OperationalError:
+        pass  # columns already exist
 
     # Legacy tables (keep for backward compat)
     c.execute("""CREATE TABLE IF NOT EXISTS clients_test (
@@ -447,8 +456,49 @@ def get_family_plan(family_id):
     ).fetchone()
     conn.close()
     if plan:
-        return jsonify({"plan":plan["plan"],"updated_at":plan["updated_at"]})
-    return jsonify({"plan":None})
+        return jsonify({
+            "plan"      : plan["plan"],
+            "pdf_data"  : plan["pdf_data"],
+            "plan_type" : plan["plan_type"] or "text",
+            "updated_at": plan["updated_at"]
+        })
+    return jsonify({"plan": None, "pdf_data": None})
+
+@app.route("/api/families/<family_id>/plan/upload", methods=["POST"])
+def upload_plan_pdf(family_id):
+    """Upload a PDF plan manually (base64 encoded)."""
+    auth = require_auth("advisor")
+    if auth: return auth
+
+    data     = request.json
+    pdf_data = data.get("pdf_data", "")
+    filename = data.get("filename", "plan.pdf")
+
+    if not pdf_data or not pdf_data.startswith("data:application/pdf"):
+        return jsonify({"error": "Invalid PDF data"}), 400
+
+    # Rough size check — base64 of 10MB is ~13.3MB string
+    if len(pdf_data) > 14_000_000:
+        return jsonify({"error": "PDF too large. Maximum size is 10MB."}), 400
+
+    now  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_db()
+    existing = conn.execute(
+        "SELECT id FROM financial_plans WHERE family_id=?", (family_id,)
+    ).fetchone()
+    if existing:
+        conn.execute(
+            "UPDATE financial_plans SET pdf_data=?, plan=NULL, plan_type='pdf', updated_at=? WHERE family_id=?",
+            (pdf_data, now, family_id)
+        )
+    else:
+        conn.execute(
+            "INSERT INTO financial_plans (id,family_id,pdf_data,plan_type,created_at,updated_at) VALUES (?,?,?,'pdf',?,?)",
+            (str(uuid.uuid4()), family_id, pdf_data, now, now)
+        )
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "success", "message": f"{filename} uploaded!", "updated_at": now})
 
 @app.route("/api/families/<family_id>/plan/generate", methods=["POST"])
 def generate_family_plan(family_id):
