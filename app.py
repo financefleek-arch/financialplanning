@@ -809,6 +809,25 @@ def compute_scheme_xirr(transactions, current_value, valuation_date):
         return None
 
 
+def extract_amounts_from_description(description):
+    """
+    When casparser merges multiple rows into one description blob,
+    extract all INR amounts from the text (e.g. 4,999.75 or 14,999.25).
+    """
+    import re
+    pattern = r'\b(\d{1,2},\d{2},\d{3}(?:\.\d{2})?|\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\b'
+    matches = re.findall(pattern, description)
+    amounts = []
+    for m in matches:
+        try:
+            val = float(m.replace(',', ''))
+            if 500 <= val <= 500000:  # realistic SIP range
+                amounts.append(val)
+        except ValueError:
+            continue
+    return amounts
+
+
 def detect_sip_amount(transactions):
     """
     Detect active recurring SIP amount from transaction history.
@@ -817,51 +836,49 @@ def detect_sip_amount(transactions):
     from collections import Counter
 
     # Check if SIP was cancelled — only look at the very last 2 transactions
-    # A mid-history "Cancelled" is just a bounced instalment, not SIP termination
     recent = transactions[-2:] if len(transactions) >= 2 else transactions
     for txn in recent:
         ttype = (txn.get("type") or "").upper()
         tdesc = (txn.get("description") or txn.get("narration") or "").upper()
         if any(k in ttype or k in tdesc for k in [
-            "SIPCANCELLED", "SIP_CANCEL", "SIP CANCEL",
-            "SIPCANCELED"
+            "SIPCANCELLED", "SIP_CANCEL", "SIP CANCEL", "SIPCANCELED"
         ]):
-            return None  # SIP is no longer active
+            return None
 
     sip_amounts = []
     for txn in transactions:
-        ttype  = (txn.get("type") or "").upper()
-        tdesc  = (txn.get("description") or txn.get("narration") or "").upper()
-        amount = float(txn.get("amount") or 0)
+        ttype       = (txn.get("type") or "").upper()
+        tdesc       = (txn.get("description") or txn.get("narration") or "")
+        tdesc_upper = tdesc.upper()
+        amount      = float(txn.get("amount") or 0)
 
-        if amount <= 0:
-            continue
-
-        # Skip failed / invalid / reversed transactions
-        if any(k in tdesc for k in ["INVALID", "FAILED", "REVERSED", "REJECTED", "CANCELL", "CANCELLED"]):
+        if any(k in tdesc_upper for k in ["INVALID", "FAILED", "REVERSED", "REJECTED", "CANCELLED"]):
             continue
 
         type_is_sip = any(k in ttype for k in [
-            "SIP", "SYSTEMATIC", "PURCHASE_SIP", "PURCHASE",
-            "SWITCH_IN", "REINVEST"
+            "SIP", "SYSTEMATIC", "PURCHASE_SIP", "PURCHASE", "SWITCH_IN", "REINVEST"
         ])
-        desc_is_sip = any(k in tdesc for k in [
+        desc_is_sip = any(k in tdesc_upper for k in [
             "SYSTEMATIC INVESTMENT", "SYSTEMATIC PURCHASE",
             "SIP PURCHASE", "SIP INSTALMENT",
             "SYS. INVESTMENT", "SYS INVESTMENT",
             "PURCHASE SIP", "INSTALMENT", "PURCHASE SYSTEMATIC"
         ])
 
-        if type_is_sip or desc_is_sip:
-            rounded = round(amount / 100) * 100
-            if rounded > 0:
-                sip_amounts.append(rounded)
+        if not (type_is_sip or desc_is_sip):
+            continue
+
+        # casparser sometimes merges rows — amount field gets stamp duty (<=1)
+        # while actual SIP amount is embedded in description text
+        if 0 < amount <= 1 and len(tdesc) > 100:
+            extracted = extract_amounts_from_description(tdesc)
+            sip_amounts.extend(extracted)
+        elif amount > 1:
+            sip_amounts.append(round(amount / 100) * 100)
 
     if not sip_amounts:
         return None
 
-    # Use the most recent recurring amount (last 6 months) rather than all-time
-    # In case SIP amount changed, recent takes precedence
     recent_sips = sip_amounts[-6:] if len(sip_amounts) >= 6 else sip_amounts
     most_common, count = Counter(recent_sips).most_common(1)[0]
     return most_common if count >= 2 else None
