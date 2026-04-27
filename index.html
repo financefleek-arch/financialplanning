@@ -693,8 +693,13 @@ async function api(path, opts={}) {
       body: opts.body ? JSON.stringify(opts.body) : undefined});
     if (res.status === 401) { doLogout(); return null; }
     const text = await res.text();
-    try { return JSON.parse(text); }
-    catch(e) { return { error: `Server error (${res.status})` }; }
+    try {
+      const json = JSON.parse(text);
+      return json;
+    } catch(e) {
+      // Server returned non-JSON (HTML error page)
+      return { error: `Server error (${res.status}) — check Railway logs` };
+    }
   } catch(e) {
     toast('Network error — check connection','error'); return null;
   }
@@ -2029,17 +2034,28 @@ async function submitCasUpload() {
     btn.disabled = false;
     btn.textContent = 'Upload & Parse';
 
+    if (!res) {
+      errEl.textContent = 'Network error — could not reach server';
+      errEl.style.display = 'block';
+      return;
+    }
+
     if (res?.status === 'success') {
       const s = res.summary;
       toast(`✅ Parsed! ${s.scheme_count} schemes · ₹${(s.total_value/100000).toFixed(1)}L value`, 'success');
       closeModal('modal-cas-upload');
-      // Re-render the MF tab
       const members = currentFamilyData.members || [];
       renderAdvisorMF(document.getElementById('family-tab-content'), members);
     } else {
-      errEl.textContent = res?.error || 'Upload failed';
+      errEl.textContent = res?.error || 'Upload failed — check Railway logs for details';
       errEl.style.display = 'block';
     }
+  };
+  reader.onerror = () => {
+    btn.disabled = false;
+    btn.textContent = 'Upload & Parse';
+    errEl.textContent = 'Failed to read file — please try again';
+    errEl.style.display = 'block';
   };
   reader.readAsDataURL(fileInput.files[0]);
 }
