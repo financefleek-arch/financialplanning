@@ -869,6 +869,8 @@ def upload_cas(family_id, member_id):
             return jsonify({"error": "Incorrect PDF password. Please check and try again."}), 400
         if "encrypted" in err_msg.lower():
             return jsonify({"error": "PDF is password-protected. Please enter the correct password."}), 400
+        if "pymupdf" in err_msg.lower() or "mupdf" in err_msg.lower():
+            return jsonify({"error": "Server missing PyMuPDF dependency. Add 'pymupdf' to requirements.txt and redeploy."}), 503
         return jsonify({"error": f"Failed to parse CAS: {err_msg}"}), 400
 
     # Process parsed data — compute XIRR and detect SIPs

@@ -4,3 +4,4 @@ anthropic
 gunicorn
 werkzeug
 casparser
+PyMuPDF
