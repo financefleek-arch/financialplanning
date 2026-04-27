@@ -810,10 +810,25 @@ def compute_scheme_xirr(transactions, current_value, valuation_date):
 
 
 def detect_sip_amount(transactions):
-    """Detect recurring SIP amount from transaction history."""
+    """
+    Detect active recurring SIP amount from transaction history.
+    Returns None if SIP is cancelled or no recurring pattern found.
+    """
     from collections import Counter
-    sip_amounts = []
 
+    # Check if SIP was cancelled — only look at the very last 2 transactions
+    # A mid-history "Cancelled" is just a bounced instalment, not SIP termination
+    recent = transactions[-2:] if len(transactions) >= 2 else transactions
+    for txn in recent:
+        ttype = (txn.get("type") or "").upper()
+        tdesc = (txn.get("description") or txn.get("narration") or "").upper()
+        if any(k in ttype or k in tdesc for k in [
+            "SIPCANCELLED", "SIP_CANCEL", "SIP CANCEL",
+            "SIPCANCELED"
+        ]):
+            return None  # SIP is no longer active
+
+    sip_amounts = []
     for txn in transactions:
         ttype  = (txn.get("type") or "").upper()
         tdesc  = (txn.get("description") or txn.get("narration") or "").upper()
@@ -822,20 +837,22 @@ def detect_sip_amount(transactions):
         if amount <= 0:
             continue
 
-        # Match on type field (casparser normalised values)
+        # Skip failed / invalid / reversed transactions
+        if any(k in tdesc for k in ["INVALID", "FAILED", "REVERSED", "REJECTED", "CANCELL", "CANCELLED"]):
+            continue
+
         type_is_sip = any(k in ttype for k in [
-            "SIP", "SYSTEMATIC", "PURCHASE", "SWITCH_IN", "REINVEST"
+            "SIP", "SYSTEMATIC", "PURCHASE_SIP", "PURCHASE",
+            "SWITCH_IN", "REINVEST"
         ])
-        # Also match on description for CAMS/KFintech verbose descriptions
         desc_is_sip = any(k in tdesc for k in [
             "SYSTEMATIC INVESTMENT", "SYSTEMATIC PURCHASE",
             "SIP PURCHASE", "SIP INSTALMENT",
             "SYS. INVESTMENT", "SYS INVESTMENT",
-            "PURCHASE SIP", "INSTALMENT"
+            "PURCHASE SIP", "INSTALMENT", "PURCHASE SYSTEMATIC"
         ])
 
         if type_is_sip or desc_is_sip:
-            # Round to nearest 100 to group similar amounts (e.g. 999.95 → 1000)
             rounded = round(amount / 100) * 100
             if rounded > 0:
                 sip_amounts.append(rounded)
@@ -843,7 +860,10 @@ def detect_sip_amount(transactions):
     if not sip_amounts:
         return None
 
-    most_common, count = Counter(sip_amounts).most_common(1)[0]
+    # Use the most recent recurring amount (last 6 months) rather than all-time
+    # In case SIP amount changed, recent takes precedence
+    recent_sips = sip_amounts[-6:] if len(sip_amounts) >= 6 else sip_amounts
+    most_common, count = Counter(recent_sips).most_common(1)[0]
     return most_common if count >= 2 else None
 
 
@@ -921,12 +941,6 @@ def upload_cas(family_id, member_id):
 
             scheme_xirr  = compute_scheme_xirr(transactions, current_val, val_date) if current_val else None
             sip_amount   = detect_sip_amount(transactions)
-
-            # Debug: log first few transaction types to Railway logs
-            if transactions and not sip_amount:
-                sample_types = [(t.get("type",""), t.get("description","")[:40] if t.get("description") else "") 
-                               for t in transactions[:3]]
-                print(f"[SIP DEBUG] {scheme.get('scheme','')[:30]} — no SIP detected. Sample txn types: {sample_types}")
 
             gain     = (current_val - cost_val) if current_val and cost_val else None
             gain_pct = round((gain / cost_val * 100), 2) if gain and cost_val else None
