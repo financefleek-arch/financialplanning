@@ -847,9 +847,14 @@ def upload_cas(family_id, member_id):
     try:
         if "," in pdf_b64:
             pdf_b64 = pdf_b64.split(",", 1)[1]
+        # Strip any whitespace/newlines that browsers may add
+        pdf_b64 = pdf_b64.strip().replace("\n", "").replace("\r", "")
         pdf_bytes = base64.b64decode(pdf_b64)
-    except Exception:
-        return jsonify({"error": "Invalid base64 PDF data"}), 400
+        # Quick sanity check — PDFs start with %PDF
+        if not pdf_bytes.startswith(b"%PDF"):
+            return jsonify({"error": "File does not appear to be a valid PDF. Please upload a CAS PDF file."}), 400
+    except Exception as e:
+        return jsonify({"error": f"Invalid file data: {str(e)}"}), 400
 
     try:
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
@@ -865,7 +870,8 @@ def upload_cas(family_id, member_id):
         try: os.unlink(tmp_path)
         except: pass
         err_msg = str(e)
-        if "password" in err_msg.lower() or "decrypt" in err_msg.lower():
+        print(f"[CAS PARSE ERROR] {err_msg}")  # visible in Railway logs
+        if "password" in err_msg.lower() or "decrypt" in err_msg.lower() or "incorrect" in err_msg.lower():
             return jsonify({"error": "Incorrect PDF password. Please check and try again."}), 400
         if "encrypted" in err_msg.lower():
             return jsonify({"error": "PDF is password-protected. Please enter the correct password."}), 400
