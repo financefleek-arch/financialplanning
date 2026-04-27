@@ -942,6 +942,11 @@ def upload_cas(family_id, member_id):
             scheme_xirr  = compute_scheme_xirr(transactions, current_val, val_date) if current_val else None
             sip_amount   = detect_sip_amount(transactions)
 
+            # Temp debug — remove after confirming SIP detection works
+            if transactions:
+                sample = [(t.get("type",""), str(t.get("amount",""))[:8]) for t in transactions[:3]]
+                print(f"[SIP] {scheme.get('scheme','')[:35]} → sip={sip_amount} | txn samples: {sample}")
+
             gain     = (current_val - cost_val) if current_val and cost_val else None
             gain_pct = round((gain / cost_val * 100), 2) if gain and cost_val else None
 
