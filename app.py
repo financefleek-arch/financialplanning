@@ -873,7 +873,8 @@ def detect_sip_amount(transactions):
             "SYSTEMATIC INVESTMENT", "SYSTEMATIC PURCHASE",
             "SIP PURCHASE", "SIP INSTALMENT",
             "SYS. INVESTMENT", "SYS INVESTMENT",
-            "PURCHASE SIP", "INSTALMENT", "PURCHASE SYSTEMATIC"
+            "PURCHASE SIP", "INSTALMENT", "PURCHASE SYSTEMATIC",
+            "EXISTING FOLIO WITH SIP", "FOLIO WITH SIP"
         ])
 
         if not (type_is_sip or desc_is_sip):
