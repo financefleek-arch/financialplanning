@@ -1561,7 +1561,7 @@ function renderClientOverview() {
           <div class="score-label">/ 10</div>
         </div>
       </div>
-      <div style="font-size:13px;color:var(--text-muted);margin-top:10px">${score>=7?'Good shape':'score>=5?Needs attention':'Needs improvement'}</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:10px">${score>=7?'Good shape':(score>=5?'Needs attention':'Needs improvement')}</div>
     </div>
     <div style="margin-top:16px">
       <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:var(--text-muted)">Savings rate</span><span style="font-weight:600">${savingsRate}%</span></div>
