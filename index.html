@@ -337,6 +337,10 @@ input,select,textarea{font-family:inherit;outline:none}
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         Financial Plan
       </div>
+      <div class="nav-item" onclick="showPage('cl-settings')" data-page="cl-settings">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </div>
     </nav>
 
     <div class="sidebar-footer">
@@ -416,6 +420,7 @@ input,select,textarea{font-family:inherit;outline:none}
         <!-- Section tabs -->
         <div class="tab-bar" id="detail-tabs">
           <div class="tab active" onclick="switchFamilyTab('overview')" data-tab="overview">Overview</div>
+          <div class="tab" onclick="switchFamilyTab('members')" data-tab="members">👥 Members</div>
           <div class="tab" onclick="switchFamilyTab('income_expenses')" data-tab="income_expenses">Income & Expenses</div>
           <div class="tab" onclick="switchFamilyTab('assets_liabilities')" data-tab="assets_liabilities">Assets & Liabilities</div>
           <div class="tab" onclick="switchFamilyTab('insurance')" data-tab="insurance">Insurance</div>
@@ -471,6 +476,32 @@ input,select,textarea{font-family:inherit;outline:none}
         </div>
       </div>
 
+      <!-- CLIENT: SETTINGS -->
+      <div class="page" id="page-cl-settings">
+        <div style="max-width:480px">
+          <h2 style="font-size:18px;font-weight:600;margin-bottom:6px">Settings</h2>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:24px">Manage your account</p>
+
+          <div class="card">
+            <div class="card-title">Change Password</div>
+            <div class="form-group" style="margin-bottom:14px">
+              <label>Current Password</label>
+              <input type="password" id="cp-current" placeholder="Enter current password" autocomplete="current-password">
+            </div>
+            <div class="form-group" style="margin-bottom:14px">
+              <label>New Password</label>
+              <input type="password" id="cp-new" placeholder="At least 6 characters" autocomplete="new-password">
+            </div>
+            <div class="form-group" style="margin-bottom:20px">
+              <label>Confirm New Password</label>
+              <input type="password" id="cp-confirm" placeholder="Repeat new password" autocomplete="new-password">
+            </div>
+            <div id="cp-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--red);font-size:13px;padding:10px 12px;border-radius:7px;margin-bottom:14px"></div>
+            <button class="btn btn-blue" id="cp-btn" onclick="submitChangePassword()" style="width:100%">Update Password</button>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /content -->
   </div><!-- /main -->
 
@@ -493,6 +524,10 @@ input,select,textarea{font-family:inherit;outline:none}
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         My Plan
       </button>
+      <button class="bnav-item" onclick="showPage('cl-settings');setBnav(this)">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </button>
       <button class="bnav-item" onclick="doLogout()" style="color:#fff;background:rgba(239,68,68,.75);border-radius:8px;margin:4px 6px;flex:0 0 auto;padding:6px 14px;min-width:unset;border-bottom:none">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         Sign out
@@ -500,6 +535,35 @@ input,select,textarea{font-family:inherit;outline:none}
     </div>
   </nav>
 </div><!-- /app-screen -->
+
+<!-- MODAL: EDIT MEMBER -->
+<div class="modal-overlay" id="modal-edit-member">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-edit-member-title">Edit Member</div>
+      <button class="btn-close" onclick="closeModal('modal-edit-member')">×</button>
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group"><label>Full Name *</label><input type="text" id="em-name" placeholder="Harshal Patil"></div>
+      <div class="form-group"><label>Email *</label><input type="email" id="em-email" placeholder="harshal@email.com"></div>
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group"><label>Phone</label><input type="tel" id="em-phone" placeholder="+91 9876543210"></div>
+      <div class="form-group"><label>Role</label>
+        <select id="em-role"><option value="primary">Primary</option><option value="member">Member</option></select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:6px">
+      <label>New Password <span style="color:var(--text-muted);font-weight:400">(leave blank to keep current)</span></label>
+      <input type="password" id="em-pass" placeholder="Enter new password to reset">
+    </div>
+    <div id="em-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--red);font-size:13px;padding:10px 12px;border-radius:7px;margin-top:12px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-edit-member')">Cancel</button>
+      <button class="btn btn-blue" onclick="submitEditMember()">Save Changes</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL: CREATE FAMILY -->
 <div class="modal-overlay" id="modal-create-family">
@@ -865,6 +929,7 @@ function renderFamilyTab(tab) {
   const familyData = data.family_data || {};
 
   if (tab === 'overview') { renderAdvisorOverview(el, members, memberData, familyData); return; }
+  if (tab === 'members')  { renderMembersTab(el, members); return; }
   if (tab === 'plan')     { renderAdvisorPlan(el); return; }
   if (tab === 'goals')    { renderFamilySection(el, 'goals', familyData.goals||{}, null, true); return; }
 
@@ -1538,6 +1603,134 @@ function renderClientCashFlow() {
         </div>
       </div>
     </div>`).join('');
+}
+
+// ================================================================
+//  ADVISOR: MEMBERS TAB
+// ================================================================
+function renderMembersTab(el, members) {
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h3 style="font-size:15px;font-weight:600">Family Members</h3>
+      <button class="btn btn-blue btn-sm" onclick="openAddMemberModal()">+ Add Member</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${members.map(m => `
+        <div class="card" style="padding:16px 20px">
+          <div style="display:flex;align-items:center;gap:14px">
+            <div style="width:42px;height:42px;border-radius:50%;background:${avatarColor(m.name)};color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${inits(m.name)}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:14px">${m.name}
+                <span class="badge ${m.role==='primary'?'badge-blue':'badge-gray'}" style="margin-left:6px">${m.role==='primary'?'Primary':'Member'}</span>
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${m.email} ${m.phone?'· '+m.phone:''}</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-shrink:0">
+              <button class="btn btn-outline btn-sm" onclick="openEditMember('${m.id}','${m.name.replace(/'/g,"\\'")}','${m.email}','${m.phone||''}','${m.role}')">Edit</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteMemberFromTab('${m.id}','${m.name.replace(/'/g,"\\'")}')">Remove</button>
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+let editingMemberId = null;
+
+function openEditMember(memberId, name, email, phone, role) {
+  editingMemberId = memberId;
+  document.getElementById('em-name').value  = name;
+  document.getElementById('em-email').value = email;
+  document.getElementById('em-phone').value = phone;
+  document.getElementById('em-role').value  = role;
+  document.getElementById('em-pass').value  = '';
+  document.getElementById('em-error').style.display = 'none';
+  openModal('modal-edit-member');
+}
+
+async function submitEditMember() {
+  const name  = document.getElementById('em-name').value.trim();
+  const email = document.getElementById('em-email').value.trim();
+  const phone = document.getElementById('em-phone').value.trim();
+  const role  = document.getElementById('em-role').value;
+  const pass  = document.getElementById('em-pass').value.trim();
+  const errEl = document.getElementById('em-error');
+
+  if (!name || !email) { errEl.textContent='Name and email are required'; errEl.style.display='block'; return; }
+
+  const body = { name, email, phone, role };
+  if (pass) {
+    if (pass.length < 6) { errEl.textContent='Password must be at least 6 characters'; errEl.style.display='block'; return; }
+    body.password = pass;
+  }
+
+  const res = await api(`/api/families/${currentFamilyId}/members/${editingMemberId}`, { method:'PUT', body });
+  if (res?.status === 'success') {
+    toast(res.message, 'success');
+    closeModal('modal-edit-member');
+    // Refresh family data
+    const fresh = await api(`/api/families/${currentFamilyId}`);
+    if (fresh) {
+      currentFamilyData._family = fresh;
+      currentFamilyData.members = fresh.members;
+      renderMembersTab(document.getElementById('family-tab-content'), fresh.members);
+    }
+  } else { errEl.textContent = res?.error||'Update failed'; errEl.style.display='block'; }
+}
+
+function openAddMemberModal() {
+  document.getElementById('em-name').value  = '';
+  document.getElementById('em-email').value = '';
+  document.getElementById('em-phone').value = '';
+  document.getElementById('em-role').value  = 'member';
+  document.getElementById('em-pass').value  = '';
+  document.getElementById('em-error').style.display = 'none';
+  editingMemberId = null;
+  document.getElementById('modal-edit-member-title').textContent = 'Add Member';
+  openModal('modal-edit-member');
+}
+
+async function deleteMemberFromTab(memberId, name) {
+  if (!confirm(`Remove ${name} from this family? Their financial data will also be deleted.`)) return;
+  const res = await api(`/api/families/${currentFamilyId}/members/${memberId}`, { method:'DELETE' });
+  if (res?.status === 'success') {
+    toast('Member removed', 'success');
+    const fresh = await api(`/api/families/${currentFamilyId}`);
+    if (fresh) {
+      currentFamilyData._family = fresh;
+      currentFamilyData.members = fresh.members;
+      renderMembersTab(document.getElementById('family-tab-content'), fresh.members);
+    }
+  } else toast(res?.error||'Failed','error');
+}
+
+// ================================================================
+//  CLIENT: CHANGE PASSWORD
+// ================================================================
+async function submitChangePassword() {
+  const current  = document.getElementById('cp-current').value;
+  const newPass  = document.getElementById('cp-new').value;
+  const confirm  = document.getElementById('cp-confirm').value;
+  const errEl    = document.getElementById('cp-error');
+  const btn      = document.getElementById('cp-btn');
+
+  errEl.style.display = 'none';
+  if (!current || !newPass || !confirm) { errEl.textContent='All fields are required'; errEl.style.display='block'; return; }
+  if (newPass.length < 6) { errEl.textContent='New password must be at least 6 characters'; errEl.style.display='block'; return; }
+  if (newPass !== confirm) { errEl.textContent='New passwords do not match'; errEl.style.display='block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Updating…';
+  const res = await api(`/api/members/${auth.memberId}/change-password`, {
+    method: 'POST',
+    body: { current_password: current, new_password: newPass }
+  });
+  btn.disabled = false; btn.textContent = 'Update Password';
+
+  if (res?.status === 'success') {
+    toast('Password changed successfully!', 'success');
+    document.getElementById('cp-current').value = '';
+    document.getElementById('cp-new').value = '';
+    document.getElementById('cp-confirm').value = '';
+  } else { errEl.textContent = res?.error||'Failed to change password'; errEl.style.display='block'; }
 }
 
 function renderClientPlan() {

@@ -339,6 +339,47 @@ def add_member(family_id):
     finally:
         conn.close()
 
+@app.route("/api/families/<family_id>/members/<member_id>", methods=["PUT"])
+def edit_member(family_id, member_id):
+    """Advisor: edit member profile (name, email, phone, role, optional password reset)."""
+    auth = require_auth("advisor")
+    if auth: return auth
+
+    data = request.json
+    now  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_db()
+
+    member = conn.execute(
+        "SELECT * FROM family_members WHERE id=? AND family_id=?", (member_id, family_id)
+    ).fetchone()
+    if not member:
+        conn.close()
+        return jsonify({"error": "Member not found"}), 404
+
+    name  = data.get("name",  member["name"]).strip()
+    email = data.get("email", member["email"]).strip().lower()
+    phone = data.get("phone", member["phone"] or "").strip()
+    role  = data.get("role",  member["role"])
+    new_password = data.get("password", "").strip()
+
+    try:
+        if new_password:
+            conn.execute(
+                "UPDATE family_members SET name=?,email=?,phone=?,role=?,password_hash=?,updated_at=? WHERE id=?",
+                (name, email, phone, role, generate_password_hash(new_password), now, member_id)
+            )
+        else:
+            conn.execute(
+                "UPDATE family_members SET name=?,email=?,phone=?,role=?,updated_at=? WHERE id=?",
+                (name, email, phone, role, now, member_id)
+            )
+        conn.commit()
+        return jsonify({"status": "success", "message": f"{name} updated!"})
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "Email already in use by another member"}), 400
+    finally:
+        conn.close()
+
 @app.route("/api/families/<family_id>/members/<member_id>", methods=["DELETE"])
 def delete_member(family_id, member_id):
     auth = require_auth("advisor")
@@ -349,6 +390,46 @@ def delete_member(family_id, member_id):
     conn.commit()
     conn.close()
     return jsonify({"status":"success"})
+
+@app.route("/api/members/<member_id>/change-password", methods=["POST"])
+def change_password(member_id):
+    """Client: change their own password."""
+    auth = require_auth()
+    if auth: return auth
+
+    session = get_session()
+    # Clients can only change their own password
+    if session["role"] == "client" and session.get("member_id") != member_id:
+        return jsonify({"error": "Access denied"}), 403
+
+    data         = request.json
+    current_pass = data.get("current_password", "")
+    new_pass     = data.get("new_password", "").strip()
+
+    if not current_pass or not new_pass:
+        return jsonify({"error": "Both current and new password are required"}), 400
+    if len(new_pass) < 6:
+        return jsonify({"error": "New password must be at least 6 characters"}), 400
+
+    conn   = get_db()
+    member = conn.execute("SELECT * FROM family_members WHERE id=?", (member_id,)).fetchone()
+    if not member:
+        conn.close()
+        return jsonify({"error": "Member not found"}), 404
+
+    if not check_password_hash(member["password_hash"], current_pass):
+        conn.close()
+        return jsonify({"error": "Current password is incorrect"}), 400
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn.execute(
+        "UPDATE family_members SET password_hash=?,updated_at=? WHERE id=?",
+        (generate_password_hash(new_pass), now, member_id)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "success", "message": "Password changed successfully!"})
+
 
 # ================================================================
 #  FINANCIAL DATA
