@@ -599,10 +599,19 @@ def get_family_data(family_id):
 
 @app.route("/api/families/<family_id>/members/<member_id>/data/<section>", methods=["POST"])
 def save_member_data(family_id, member_id, section):
-    auth = require_auth("advisor")
+    auth = require_auth()
     if auth: return auth
-    if section not in MEMBER_SECTIONS:
-        return jsonify({"error":f"Invalid section. Use: {MEMBER_SECTIONS}"}), 400
+
+    session = get_session()
+    if session["role"] == "client":
+        if session.get("family_id") != family_id:
+            return jsonify({"error": "Access denied"}), 403
+        if session.get("member_id") != member_id:
+            return jsonify({"error": "You can only update your own data"}), 403
+        if section not in ["risk_profile"]:
+            return jsonify({"error": "Clients can only update risk profile"}), 403
+    elif section not in MEMBER_SECTIONS:
+        return jsonify({"error": f"Invalid section. Use: {MEMBER_SECTIONS}"}), 400
 
     data = request.json
     now  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
