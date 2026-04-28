@@ -461,7 +461,57 @@ def delete_member(family_id, member_id):
     conn.close()
     return jsonify({"status":"success"})
 
-@app.route("/api/members/<member_id>/change-password", methods=["POST"])
+@app.route("/api/members/<member_id>/profile", methods=["PUT"])
+def update_profile(member_id):
+    """Client: update their own phone and email."""
+    auth = require_auth()
+    if auth: return auth
+
+    session = get_session()
+    if session["role"] == "client" and session.get("member_id") != member_id:
+        return jsonify({"error": "Access denied"}), 403
+
+    data  = request.json
+    email = data.get("email", "").strip().lower()
+    phone = data.get("phone", "").strip()
+    now   = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+
+    conn = get_db()
+    try:
+        conn.execute(
+            "UPDATE family_members SET email=?, phone=?, updated_at=? WHERE id=?",
+            (email, phone, now, member_id)
+        )
+        conn.commit()
+        return jsonify({"status": "success", "message": "Profile updated!"})
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "Email already in use"}), 400
+    finally:
+        conn.close()
+
+@app.route("/api/members/<member_id>", methods=["GET"])
+def get_member(member_id):
+    """Get member profile details."""
+    auth = require_auth()
+    if auth: return auth
+
+    session = get_session()
+    if session["role"] == "client" and session.get("member_id") != member_id:
+        return jsonify({"error": "Access denied"}), 403
+
+    conn   = get_db()
+    member = conn.execute(
+        "SELECT id, name, email, phone, role FROM family_members WHERE id=?",
+        (member_id,)
+    ).fetchone()
+    conn.close()
+
+    if not member:
+        return jsonify({"error": "Member not found"}), 404
+    return jsonify(dict(member))
 def change_password(member_id):
     """Client: change their own password."""
     auth = require_auth()

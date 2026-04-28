@@ -494,6 +494,27 @@ input,select,textarea{font-family:inherit;outline:none}
           <h2 style="font-size:18px;font-weight:600;margin-bottom:6px">Settings</h2>
           <p style="font-size:13px;color:var(--text-muted);margin-bottom:24px">Manage your account</p>
 
+          <!-- Profile -->
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title">Profile</div>
+            <div class="form-group" style="margin-bottom:14px">
+              <label>Full Name</label>
+              <input type="text" id="prof-name" disabled style="background:var(--gray-100);color:var(--text-muted)">
+            </div>
+            <div class="form-group" style="margin-bottom:14px">
+              <label>Email</label>
+              <input type="email" id="prof-email" placeholder="your@email.com" autocomplete="email">
+            </div>
+            <div class="form-group" style="margin-bottom:20px">
+              <label>Phone</label>
+              <input type="tel" id="prof-phone" placeholder="+91 9876543210">
+            </div>
+            <div id="prof-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--red);font-size:13px;padding:10px 12px;border-radius:7px;margin-bottom:14px"></div>
+            <div id="prof-success" style="display:none;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);color:var(--green);font-size:13px;padding:10px 12px;border-radius:7px;margin-bottom:14px"></div>
+            <button class="btn btn-blue" id="prof-btn" onclick="submitUpdateProfile()" style="width:100%">Save Profile</button>
+          </div>
+
+          <!-- Change Password -->
           <div class="card">
             <div class="card-title">Change Password</div>
             <div id="cp-disabled-msg" style="display:none;padding:16px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;font-size:13px;color:var(--amber)">
@@ -734,6 +755,7 @@ function showPage(id) {
     const allowed = auth.allowPasswordChange !== false;
     document.getElementById('cp-form').style.display        = allowed ? '' : 'none';
     document.getElementById('cp-disabled-msg').style.display = allowed ? 'none' : '';
+    loadClientProfile();
   }
   if (window.innerWidth <= 768) closeSidebar();
 }
@@ -1850,8 +1872,40 @@ async function deleteMemberFromTab(memberId, name) {
 }
 
 // ================================================================
-//  CLIENT: CHANGE PASSWORD
+//  CLIENT: PROFILE + CHANGE PASSWORD
 // ================================================================
+async function loadClientProfile() {
+  const res = await api(`/api/members/${auth.memberId}`);
+  if (!res || res.error) return;
+  document.getElementById('prof-name').value  = res.name  || '';
+  document.getElementById('prof-email').value = res.email || '';
+  document.getElementById('prof-phone').value = res.phone || '';
+}
+
+async function submitUpdateProfile() {
+  const email   = document.getElementById('prof-email').value.trim();
+  const phone   = document.getElementById('prof-phone').value.trim();
+  const errEl   = document.getElementById('prof-error');
+  const succEl  = document.getElementById('prof-success');
+  const btn     = document.getElementById('prof-btn');
+
+  errEl.style.display = 'none'; succEl.style.display = 'none';
+  if (!email) { errEl.textContent = 'Email is required'; errEl.style.display = 'block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const res = await api(`/api/members/${auth.memberId}/profile`, {
+    method: 'PUT', body: { email, phone }
+  });
+  btn.disabled = false; btn.textContent = 'Save Profile';
+
+  if (res?.status === 'success') {
+    succEl.textContent = 'Profile updated successfully!';
+    succEl.style.display = 'block';
+    // Update stored auth if email changed
+    auth.username = email;
+    localStorage.setItem('fleek_auth', JSON.stringify(auth));
+  } else { errEl.textContent = res?.error || 'Update failed'; errEl.style.display = 'block'; }
+}
 async function submitChangePassword() {
   const current  = document.getElementById('cp-current').value;
   const newPass  = document.getElementById('cp-new').value;
