@@ -660,6 +660,18 @@ def upload_plan_pdf(family_id):
     finally:
         conn.close()
 
+@app.route("/api/families/<family_id>/plan", methods=["DELETE"])
+def delete_family_plan(family_id):
+    """Advisor: delete the current plan (AI generated or PDF)."""
+    auth = require_auth("advisor")
+    if auth: return auth
+
+    conn = get_db()
+    conn.execute("DELETE FROM financial_plans WHERE family_id=?", (family_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "success", "message": "Plan deleted"})
+
 @app.route("/api/families/<family_id>/plan/generate", methods=["POST"])
 def generate_family_plan(family_id):
     auth = require_auth("advisor")

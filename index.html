@@ -1151,6 +1151,10 @@ function renderAdvisorPlan(el) {
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           ${hasPlan ? '↻ Regenerate' : 'Generate with AI'}
         </button>
+        ${hasPlan && !plan.pdf_data ? `<button class="btn btn-danger btn-sm" onclick="deletePlan()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          Delete Plan
+        </button>` : ''}
       </div>
     </div>
     <input type="file" id="pdf-upload-input" accept="application/pdf" style="display:none" onchange="handlePdfUpload(event)">
@@ -1479,8 +1483,18 @@ async function submitDataModal() {
 }
 
 // ================================================================
-//  GENERATE PLAN
+//  GENERATE + DELETE PLAN
 // ================================================================
+async function deletePlan() {
+  if (!confirm('Delete this AI-generated plan? This cannot be undone.')) return;
+  const res = await api(`/api/families/${currentFamilyId}/plan`, { method: 'DELETE' });
+  if (res?.status === 'success') {
+    toast('Plan deleted', 'success');
+    currentFamilyData._plan = null;
+    renderAdvisorPlan(document.getElementById('family-tab-content'));
+  } else toast(res?.error || 'Failed to delete plan', 'error');
+}
+
 async function generatePlan() {
   const btn = document.getElementById('btn-gen-plan');
   if (btn) { btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Generating…'; }
