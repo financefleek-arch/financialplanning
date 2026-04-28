@@ -1125,7 +1125,11 @@ function renderAdvisorGoals(el, familyData) {
 
     <!-- Goals -->
     <div class="card">
-      <div class="card-title">Family Goals</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="card-title" style="margin:0">Family Goals</div>
+        <button class="btn btn-blue btn-sm" onclick="openAdvisorGoalEditor()">✎ Edit Goals</button>
+      </div>
+      <div id="adv-goals-display">
       ${goals.length ? `
       <div style="overflow-x:auto">
         <table class="tbl">
@@ -1151,8 +1155,86 @@ function renderAdvisorGoals(el, familyData) {
             }).join('')}
           </tbody>
         </table>
-      </div>` : `<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px">Client hasn't added goals yet.</div>`}
+      </div>` : `<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px">No goals added yet. Click "Edit Goals" to add.</div>`}
+      </div>
+
+      <!-- Inline editor (hidden by default) -->
+      <div id="adv-goals-editor" style="display:none;margin-top:16px;border-top:1px solid var(--gray-200);padding-top:16px">
+        <div id="adv-goals-editor-rows"></div>
+        <button class="btn btn-outline btn-sm" onclick="addAdvisorGoalRow()" style="margin-bottom:12px">+ Add Goal</button>
+        <div id="adv-goals-err" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--red);font-size:13px;padding:10px 12px;border-radius:7px;margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-blue" onclick="saveAdvisorGoals()" style="flex:1">Save Goals</button>
+          <button class="btn btn-outline" onclick="closeAdvisorGoalEditor()">Cancel</button>
+        </div>
+      </div>
     </div>`;
+}
+
+const GOAL_CATS = ['Retirement','Home Purchase','Education','Car','Emergency Fund','Wedding','Travel','Business','Wealth Creation','Other'];
+let advisorGoals = [];
+
+function openAdvisorGoalEditor() {
+  advisorGoals = JSON.parse(JSON.stringify(currentFamilyData.family_data?.goals || []));
+  if (!advisorGoals.length) advisorGoals.push({ category: 'Wealth Creation', amount: '', target_year: '' });
+  renderAdvisorGoalEditorRows();
+  document.getElementById('adv-goals-editor').style.display = 'block';
+  document.getElementById('adv-goals-display').style.display = 'none';
+}
+
+function closeAdvisorGoalEditor() {
+  document.getElementById('adv-goals-editor').style.display = 'none';
+  document.getElementById('adv-goals-display').style.display = 'block';
+}
+
+function renderAdvisorGoalEditorRows() {
+  const container = document.getElementById('adv-goals-editor-rows');
+  container.innerHTML = advisorGoals.map((g, i) => `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:10px">
+      <div class="form-group" style="margin:0">
+        ${i === 0 ? '<label>Goal</label>' : ''}
+        <select onchange="advisorGoals[${i}].category=this.value" style="padding:8px 10px;border:1px solid var(--gray-200);border-radius:7px;font-size:13px;width:100%">
+          ${GOAL_CATS.map(c => `<option value="${c}" ${g.category===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        ${i === 0 ? '<label>Target Amount (₹)</label>' : ''}
+        <input type="number" value="${g.amount||''}" placeholder="5000000"
+          oninput="advisorGoals[${i}].amount=Number(this.value)"
+          style="padding:8px 10px;border:1px solid var(--gray-200);border-radius:7px;font-size:13px;width:100%">
+      </div>
+      <div class="form-group" style="margin:0">
+        ${i === 0 ? '<label>Target Year</label>' : ''}
+        <input type="number" value="${g.target_year||''}" placeholder="2035" min="2024" max="2060"
+          oninput="advisorGoals[${i}].target_year=Number(this.value)"
+          style="padding:8px 10px;border:1px solid var(--gray-200);border-radius:7px;font-size:13px;width:100%">
+      </div>
+      <div style="${i===0?'margin-top:20px':''}">
+        <button class="btn btn-danger btn-sm" onclick="advisorGoals.splice(${i},1);renderAdvisorGoalEditorRows()">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function addAdvisorGoalRow() {
+  advisorGoals.push({ category: 'Wealth Creation', amount: '', target_year: '' });
+  renderAdvisorGoalEditorRows();
+}
+
+async function saveAdvisorGoals() {
+  const errEl = document.getElementById('adv-goals-err');
+  errEl.style.display = 'none';
+  for (const g of advisorGoals) {
+    if (!g.target_year) { errEl.textContent = 'Please enter a target year for all goals'; errEl.style.display = 'block'; return; }
+  }
+  const res = await api(`/api/families/${currentFamilyId}/data/goals`, {
+    method: 'POST', body: advisorGoals
+  });
+  if (res?.status === 'success') {
+    toast('Goals saved!', 'success');
+    currentFamilyData.family_data = currentFamilyData.family_data || {};
+    currentFamilyData.family_data.goals = advisorGoals;
+    renderAdvisorGoals(document.getElementById('family-tab-content'), currentFamilyData.family_data);
+  } else { errEl.textContent = res?.error || 'Failed to save'; errEl.style.display = 'block'; }
 }
 
 function renderAdvisorOverview(el, members, memberData, familyData) {
