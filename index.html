@@ -337,6 +337,10 @@ input,select,textarea{font-family:inherit;outline:none}
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
         Mutual Funds
       </div>
+      <div class="nav-item" onclick="showPage('cl-goals')" data-page="cl-goals">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Goals
+      </div>
       <div class="nav-item" onclick="showPage('cl-plan')" data-page="cl-plan">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         Financial Plan
@@ -474,6 +478,41 @@ input,select,textarea{font-family:inherit;outline:none}
         </div>
       </div>
 
+      <!-- CLIENT: GOALS -->
+      <div class="page" id="page-cl-goals">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+          <div>
+            <h2 style="font-size:18px;font-weight:600">Goals & Notes</h2>
+            <p style="font-size:13px;color:var(--text-muted);margin-top:3px">Your advisor uses this to personalise your financial plan</p>
+          </div>
+        </div>
+
+        <!-- Goals -->
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div class="card-title" style="margin:0">Financial Goals</div>
+            <button class="btn btn-blue btn-sm" onclick="addClientGoalRow()">+ Add Goal</button>
+          </div>
+          <div id="cl-goals-list"></div>
+          <div id="cl-goals-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--red);font-size:13px;padding:10px 12px;border-radius:7px;margin-top:12px"></div>
+          <div id="cl-goals-success" style="display:none;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);color:var(--green);font-size:13px;padding:10px 12px;border-radius:7px;margin-top:12px"></div>
+          <button class="btn btn-blue" onclick="saveClientGoals()" style="width:100%;margin-top:16px">Save Goals</button>
+        </div>
+
+        <!-- Note to advisor -->
+        <div class="card">
+          <div class="card-title">Note to Advisor</div>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.5">
+            Share any context your advisor should know — upcoming life events, concerns, or anything that should factor into your plan.
+          </p>
+          <textarea id="cl-note-text" rows="5" placeholder="e.g. Planning to buy a house in 2 years. Expecting a salary hike next quarter. Concerned about my retirement corpus..."
+            style="width:100%;padding:10px 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:13.5px;font-family:inherit;resize:vertical;line-height:1.6"></textarea>
+          <div id="cl-note-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--red);font-size:13px;padding:10px 12px;border-radius:7px;margin-top:10px"></div>
+          <div id="cl-note-success" style="display:none;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);color:var(--green);font-size:13px;padding:10px 12px;border-radius:7px;margin-top:10px"></div>
+          <button class="btn btn-blue" onclick="saveClientNote()" style="width:100%;margin-top:14px">Send Note</button>
+        </div>
+      </div>
+
       <!-- CLIENT: MUTUAL FUNDS -->
       <div class="page" id="page-cl-mf">
         <div id="cl-mf-content">
@@ -561,6 +600,10 @@ input,select,textarea{font-family:inherit;outline:none}
       <button class="bnav-item" onclick="showPage('cl-mf');setBnav(this)">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
         MF
+      </button>
+      <button class="bnav-item" onclick="showPage('cl-goals');setBnav(this)">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Goals
       </button>
       <button class="bnav-item" onclick="showPage('cl-plan');setBnav(this)">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -751,6 +794,7 @@ function showPage(id) {
   };
   document.getElementById('topbar-title').textContent = titles[id] || id;
   // Toggle settings form based on permission
+  if (id === 'cl-goals') loadClientGoals();
   if (id === 'cl-settings') {
     const allowed = auth.allowPasswordChange !== false;
     document.getElementById('cp-form').style.display        = allowed ? '' : 'none';
@@ -1051,10 +1095,64 @@ function renderFamilyTab(tab) {
   if (tab === 'members')       { renderMembersTab(el, members); return; }
   if (tab === 'plan')          { renderAdvisorPlan(el); return; }
   if (tab === 'mutual_funds')  { renderAdvisorMF(el, members); return; }
-  if (tab === 'goals')    { renderFamilySection(el, 'goals', familyData.goals||{}, null, true); return; }
+  if (tab === 'goals') {
+    renderAdvisorGoals(el, familyData);
+    return;
+  }
 
   // Per-member section
   renderMemberSection(el, tab, members, memberData);
+}
+
+function renderAdvisorGoals(el, familyData) {
+  const goals = familyData.goals || [];
+  const note  = familyData.client_notes?.note || '';
+  const noteDate = familyData.client_notes?.updated_at || '';
+
+  el.innerHTML = `
+    <!-- Client note to advisor -->
+    ${note ? `
+    <div class="card" style="margin-bottom:16px;border-left:3px solid var(--accent)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="card-title" style="margin:0">📩 Note from Client</div>
+        ${noteDate ? `<span style="font-size:11px;color:var(--text-muted)">${noteDate}</span>` : ''}
+      </div>
+      <p style="font-size:13.5px;line-height:1.7;color:var(--text);white-space:pre-wrap">${note}</p>
+    </div>` : `
+    <div style="background:var(--gray-50);border:1px dashed var(--gray-200);border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:var(--text-muted)">
+      No note from client yet.
+    </div>`}
+
+    <!-- Goals -->
+    <div class="card">
+      <div class="card-title">Family Goals</div>
+      ${goals.length ? `
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr>
+            <th>Goal</th>
+            <th style="text-align:right">Target Amount</th>
+            <th style="text-align:center">Target Year</th>
+            <th style="text-align:center">Years Away</th>
+          </tr></thead>
+          <tbody>
+            ${goals.map(g => {
+              const yearsAway = g.target_year ? g.target_year - new Date().getFullYear() : null;
+              return `<tr>
+                <td><span class="badge badge-blue">${g.category || 'Goal'}</span></td>
+                <td class="mono" style="text-align:right">${g.amount ? fmtL(g.amount) : '—'}</td>
+                <td style="text-align:center">${g.target_year || '—'}</td>
+                <td style="text-align:center">
+                  <span class="badge ${yearsAway <= 3 ? 'badge-red' : yearsAway <= 7 ? 'badge-amber' : 'badge-green'}">
+                    ${yearsAway != null ? yearsAway + ' yrs' : '—'}
+                  </span>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>` : `<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px">Client hasn't added goals yet.</div>`}
+    </div>`;
 }
 
 function renderAdvisorOverview(el, members, memberData, familyData) {
@@ -1869,6 +1967,115 @@ async function deleteMemberFromTab(memberId, name) {
       renderMembersTab(document.getElementById('family-tab-content'), fresh.members);
     }
   } else toast(res?.error||'Failed','error');
+}
+
+// ================================================================
+//  CLIENT: GOALS + NOTE TO ADVISOR
+// ================================================================
+const GOAL_CATEGORIES = [
+  'Retirement', 'Home Purchase', 'Education', 'Car', 'Emergency Fund',
+  'Wedding', 'Travel', 'Business', 'Wealth Creation', 'Other'
+];
+
+let clientGoals = [];
+
+async function loadClientGoals() {
+  const data = await api(`/api/families/${auth.familyId}/data`);
+  if (!data) return;
+
+  const goals = data.family_data?.goals || [];
+  const note  = data.family_data?.client_notes?.note || '';
+
+  clientGoals = goals.length ? goals : [];
+  renderClientGoalRows();
+  document.getElementById('cl-note-text').value = note;
+}
+
+function renderClientGoalRows() {
+  const container = document.getElementById('cl-goals-list');
+  if (!clientGoals.length) {
+    container.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px">
+      No goals added yet. Click "+ Add Goal" to add your first goal.
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = clientGoals.map((g, i) => `
+    <div class="goal-row" id="goal-row-${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--gray-100)">
+      <div class="form-group" style="margin:0">
+        ${i === 0 ? '<label>Goal</label>' : ''}
+        <select onchange="updateGoal(${i},'category',this.value)" style="padding:8px 10px;border:1px solid var(--gray-200);border-radius:7px;font-size:13px;width:100%">
+          ${GOAL_CATEGORIES.map(c => `<option value="${c}" ${g.category===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        ${i === 0 ? '<label>Target Amount (₹)</label>' : ''}
+        <input type="number" value="${g.amount||''}" placeholder="e.g. 5000000"
+          onchange="updateGoal(${i},'amount',this.value)"
+          style="padding:8px 10px;border:1px solid var(--gray-200);border-radius:7px;font-size:13px;width:100%">
+      </div>
+      <div class="form-group" style="margin:0">
+        ${i === 0 ? '<label>Target Year</label>' : ''}
+        <input type="number" value="${g.target_year||''}" placeholder="e.g. 2035" min="2024" max="2060"
+          onchange="updateGoal(${i},'target_year',this.value)"
+          style="padding:8px 10px;border:1px solid var(--gray-200);border-radius:7px;font-size:13px;width:100%">
+      </div>
+      <div style="${i === 0 ? 'margin-top:20px' : ''}">
+        <button class="btn btn-danger btn-sm" onclick="removeClientGoal(${i})">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function updateGoal(idx, field, value) {
+  if (!clientGoals[idx]) return;
+  clientGoals[idx][field] = field === 'amount' || field === 'target_year' ? Number(value) : value;
+}
+
+function addClientGoalRow() {
+  clientGoals.push({ category: 'Wealth Creation', amount: '', target_year: '' });
+  renderClientGoalRows();
+}
+
+function removeClientGoal(idx) {
+  clientGoals.splice(idx, 1);
+  renderClientGoalRows();
+}
+
+async function saveClientGoals() {
+  const errEl  = document.getElementById('cl-goals-error');
+  const succEl = document.getElementById('cl-goals-success');
+  errEl.style.display = 'none'; succEl.style.display = 'none';
+
+  // Validate — each goal needs at least a category and year
+  for (const g of clientGoals) {
+    if (!g.target_year) {
+      errEl.textContent = 'Please enter a target year for all goals';
+      errEl.style.display = 'block'; return;
+    }
+  }
+
+  const res = await api(`/api/families/${auth.familyId}/data/goals`, {
+    method: 'POST', body: clientGoals
+  });
+  if (res?.status === 'success') {
+    succEl.textContent = 'Goals saved!'; succEl.style.display = 'block';
+    setTimeout(() => succEl.style.display = 'none', 3000);
+  } else { errEl.textContent = res?.error || 'Failed to save'; errEl.style.display = 'block'; }
+}
+
+async function saveClientNote() {
+  const note   = document.getElementById('cl-note-text').value.trim();
+  const errEl  = document.getElementById('cl-note-error');
+  const succEl = document.getElementById('cl-note-success');
+  errEl.style.display = 'none'; succEl.style.display = 'none';
+
+  const res = await api(`/api/families/${auth.familyId}/data/client_notes`, {
+    method: 'POST', body: { note, updated_at: new Date().toLocaleDateString('en-IN') }
+  });
+  if (res?.status === 'success') {
+    succEl.textContent = 'Note sent to your advisor!'; succEl.style.display = 'block';
+    setTimeout(() => succEl.style.display = 'none', 3000);
+  } else { errEl.textContent = res?.error || 'Failed to save'; errEl.style.display = 'block'; }
 }
 
 // ================================================================

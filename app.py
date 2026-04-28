@@ -559,7 +559,7 @@ def change_password(member_id):
 #  FINANCIAL DATA
 # ================================================================
 MEMBER_SECTIONS = ["income_expenses","assets_liabilities","insurance","risk_profile"]
-FAMILY_SECTIONS = ["goals"]
+FAMILY_SECTIONS = ["goals", "client_notes"]
 
 @app.route("/api/families/<family_id>/data", methods=["GET"])
 def get_family_data(family_id):
@@ -622,10 +622,18 @@ def save_member_data(family_id, member_id, section):
 
 @app.route("/api/families/<family_id>/data/<section>", methods=["POST"])
 def save_family_level_data(family_id, section):
-    auth = require_auth("advisor")
+    auth = require_auth()
     if auth: return auth
-    if section not in FAMILY_SECTIONS:
-        return jsonify({"error":f"Invalid section. Use: {FAMILY_SECTIONS}"}), 400
+
+    session = get_session()
+    # Clients can only write goals and notes for their own family
+    if session["role"] == "client":
+        if session.get("family_id") != family_id:
+            return jsonify({"error": "Access denied"}), 403
+        if section not in ["goals", "client_notes"]:
+            return jsonify({"error": "Clients can only update goals and notes"}), 403
+    elif section not in FAMILY_SECTIONS:
+        return jsonify({"error": f"Invalid section. Use: {FAMILY_SECTIONS}"}), 400
 
     data = request.json
     now  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
