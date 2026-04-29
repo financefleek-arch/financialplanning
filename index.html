@@ -476,17 +476,19 @@ input,select,textarea{font-family:inherit;outline:none}
           <div class="card">
             <div class="card-title">Family Health Score</div>
             <div id="cl-health"></div>
-            <div style="margin-top:14px;border-top:1px solid var(--gray-100);padding-top:12px">
-              <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px">Risk Profile</div>
-              <div id="cl-risk-gauge"></div>
-            </div>
           </div>
         </div>
 
-        <!-- Row 2: Income vs Expense Waterfall -->
-        <div class="card" style="margin-bottom:18px">
-          <div class="card-title">Income vs Expenses</div>
-          <div id="cl-waterfall"></div>
+        <!-- Row 2: Risk Gauge + Waterfall side by side -->
+        <div class="grid-2" style="margin-bottom:18px">
+          <div class="card">
+            <div class="card-title">Risk Profile</div>
+            <div id="cl-risk-gauge"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Income vs Expenses</div>
+            <div id="cl-waterfall"></div>
+          </div>
         </div>
 
         <div class="card"><div class="card-title">Key Insights</div><div id="cl-insights"></div></div>
@@ -2186,7 +2188,12 @@ function renderClientOverview() {
   const riskGaugeEl = document.getElementById('cl-risk-gauge');
   const rp = currentFamilyData.member_data?.[auth.memberId]?.risk_profile;
   if (!rp?.profile) {
-    riskGaugeEl.innerHTML = `<div style="font-size:12px;color:var(--text-muted)">Not assessed yet. Complete the Risk Profile assessment.</div>`;
+    riskGaugeEl.innerHTML = `
+      <div style="text-align:center;padding:20px 0;color:var(--text-muted)">
+        <div style="font-size:32px;margin-bottom:8px">🛡️</div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Not assessed yet</div>
+        <div style="font-size:12px;line-height:1.5">Complete the Risk Profile<br>assessment in the Risk tab.</div>
+      </div>`;
   } else {
     const RISK_META = {
       'conservative':{'label':'Conservative','color':'#047857'},
@@ -2238,7 +2245,12 @@ function renderClientOverview() {
   const EXP_COLORS  = ['#EF4444','#F97316','#8B5CF6','#6366F1','#F59E0B','#10B981','#3B82F6','#14B8A6','#9CA3AF'];
 
   if (!tIncome) {
-    waterfallEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No income/expense data yet.</p>';
+    waterfallEl.innerHTML = `
+      <div style="text-align:center;padding:20px 0;color:var(--text-muted)">
+        <div style="font-size:32px;margin-bottom:8px">💰</div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:4px">No data yet</div>
+        <div style="font-size:12px">Your advisor will fill in<br>your income and expenses.</div>
+      </div>`;
   } else {
     const activeExp = EXP_KEYS.map((k,i) => ({
       key:k, label:EXP_LABELS[k], val:expBreakdown[k]||0, color:EXP_COLORS[i]
