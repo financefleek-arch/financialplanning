@@ -179,7 +179,22 @@ def init_db():
         id TEXT PRIMARY KEY, client_id TEXT NOT NULL, plan TEXT NOT NULL,
         created_at TEXT, updated_at TEXT)""")
 
-    # CAS portfolios — parsed mutual fund data per member
+    # Meetings — per family, advisor only
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS meetings (
+            id          TEXT PRIMARY KEY,
+            family_id   TEXT NOT NULL,
+            date        TEXT NOT NULL,
+            type        TEXT DEFAULT 'call',
+            notes       TEXT,
+            action_items TEXT DEFAULT '[]',
+            next_meeting TEXT,
+            created_at  TEXT,
+            updated_at  TEXT,
+            FOREIGN KEY (family_id) REFERENCES families(id)
+        )
+    """)
+    c.execute("CREATE INDEX IF NOT EXISTS idx_meetings_family ON meetings(family_id, date DESC)")
     c.execute("""
         CREATE TABLE IF NOT EXISTS cas_portfolios (
             id          TEXT PRIMARY KEY,
@@ -1178,6 +1193,74 @@ def get_family_cas(family_id):
             **data
         }
     return jsonify(result)
+
+
+# ================================================================
+#  MEETINGS
+# ================================================================
+@app.route("/api/families/<family_id>/meetings", methods=["GET"])
+def get_meetings(family_id):
+    auth = require_auth("advisor")
+    if auth: return auth
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM meetings WHERE family_id=? ORDER BY date DESC",
+        (family_id,)
+    ).fetchall()
+    conn.close()
+    return jsonify([{**dict(r), "action_items": json.loads(r["action_items"] or "[]")} for r in rows])
+
+
+@app.route("/api/families/<family_id>/meetings", methods=["POST"])
+def create_meeting(family_id):
+    auth = require_auth("advisor")
+    if auth: return auth
+    data = request.json
+    now  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    mid  = str(uuid.uuid4())
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO meetings (id,family_id,date,type,notes,action_items,next_meeting,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+        (mid, family_id,
+         data.get("date", now[:10]),
+         data.get("type", "call"),
+         data.get("notes", ""),
+         json.dumps(data.get("action_items", [])),
+         data.get("next_meeting", ""),
+         now, now)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "success", "id": mid})
+
+
+@app.route("/api/families/<family_id>/meetings/<meeting_id>", methods=["PUT"])
+def update_meeting(family_id, meeting_id):
+    auth = require_auth("advisor")
+    if auth: return auth
+    data = request.json
+    now  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_db()
+    conn.execute(
+        "UPDATE meetings SET date=?,type=?,notes=?,action_items=?,next_meeting=?,updated_at=? WHERE id=? AND family_id=?",
+        (data.get("date"), data.get("type","call"), data.get("notes",""),
+         json.dumps(data.get("action_items", [])),
+         data.get("next_meeting",""), now, meeting_id, family_id)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "success"})
+
+
+@app.route("/api/families/<family_id>/meetings/<meeting_id>", methods=["DELETE"])
+def delete_meeting(family_id, meeting_id):
+    auth = require_auth("advisor")
+    if auth: return auth
+    conn = get_db()
+    conn.execute("DELETE FROM meetings WHERE id=? AND family_id=?", (meeting_id, family_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "success"})
 
 
 # ================================================================

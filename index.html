@@ -452,6 +452,7 @@ input,select,textarea{font-family:inherit;outline:none}
           <div class="tab" onclick="switchFamilyTab('risk_profile')" data-tab="risk_profile">Risk Profile</div>
           <div class="tab" onclick="switchFamilyTab('mutual_funds')" data-tab="mutual_funds">📈 Mutual Funds</div>
           <div class="tab" onclick="switchFamilyTab('plan')" data-tab="plan">📋 Plan</div>
+          <div class="tab" onclick="switchFamilyTab('meetings')" data-tab="meetings">🗓 Meetings</div>
         </div>
 
         <div id="family-tab-content"></div>
@@ -843,6 +844,51 @@ input,select,textarea{font-family:inherit;outline:none}
     </div>
   </nav>
 </div><!-- /app-screen -->
+
+<!-- MODAL: MEETING -->
+<div class="modal-overlay" id="modal-meeting">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-meeting-title">Log Meeting</div>
+      <button class="btn-close" onclick="closeModal('modal-meeting')">×</button>
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label>Date *</label>
+        <input type="date" id="mtg-date">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="mtg-type">
+          <option value="call">📞 Phone Call</option>
+          <option value="video">💻 Video Call</option>
+          <option value="in-person">🤝 In Person</option>
+          <option value="email">📧 Email</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Discussion Notes</label>
+      <textarea id="mtg-notes" rows="3" placeholder="Key points discussed, decisions made, client concerns..." style="width:100%;padding:10px 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical"></textarea>
+    </div>
+    <div class="form-group">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <label style="margin:0">Action Items</label>
+        <button class="btn btn-outline btn-sm" onclick="addActionItem()">+ Add</button>
+      </div>
+      <div id="mtg-action-items"></div>
+    </div>
+    <div class="form-group">
+      <label>Next Meeting Date</label>
+      <input type="date" id="mtg-next">
+    </div>
+    <div id="mtg-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--red);font-size:13px;padding:10px 12px;border-radius:7px;margin-bottom:12px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-meeting')">Cancel</button>
+      <button class="btn btn-blue" onclick="submitMeeting()">Save Meeting</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL: CAS UPLOAD -->
 <div class="modal-overlay" id="modal-cas-upload">
@@ -1318,6 +1364,7 @@ function renderFamilyTab(tab) {
   if (tab === 'overview')      { renderAdvisorOverview(el, members, memberData, familyData); return; }
   if (tab === 'members')       { renderMembersTab(el, members); return; }
   if (tab === 'plan')          { renderAdvisorPlan(el); return; }
+  if (tab === 'meetings')      { renderMeetingsTab(el); return; }
   if (tab === 'mutual_funds')  { renderAdvisorMF(el, members); return; }
   if (tab === 'goals')         { renderAdvisorGoals(el, familyData); return; }
   if (tab === 'risk_profile')  { renderAdvisorRiskProfile(el, members, memberData); return; }
@@ -2212,7 +2259,180 @@ function renderClientCashFlow() {
 }
 
 // ================================================================
-//  ADVISOR: MEMBERS TAB
+//  ADVISOR: MEETINGS
+// ================================================================
+const MTG_TYPE_LABEL = { call:'📞 Phone Call', video:'💻 Video Call', 'in-person':'🤝 In Person', email:'📧 Email' };
+const ACTION_STATUS  = { pending:'⏳ Pending', done:'✅ Done', cancelled:'❌ Cancelled' };
+let editingMeetingId = null;
+let meetingActionItems = [];
+
+async function renderMeetingsTab(el) {
+  el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-muted)">Loading meetings…</div>`;
+  const meetings = await api(`/api/families/${currentFamilyId}/meetings`);
+  if (!meetings) return;
+
+  // Count pending action items across all meetings
+  const pendingCount = meetings.reduce((s, m) =>
+    s + (m.action_items || []).filter(a => a.status === 'pending').length, 0);
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:15px;font-weight:600">Meeting History</div>
+        ${pendingCount ? `<div style="font-size:12px;color:var(--amber);margin-top:2px">⏳ ${pendingCount} pending action item${pendingCount>1?'s':''}</div>` : ''}
+      </div>
+      <button class="btn btn-blue btn-sm" onclick="openAddMeeting()">+ Log Meeting</button>
+    </div>
+
+    ${!meetings.length ? `
+      <div class="card" style="text-align:center;padding:40px;color:var(--text-muted)">
+        <div style="font-size:36px;margin-bottom:12px">🗓</div>
+        <div style="font-size:14px;font-weight:500;margin-bottom:6px">No meetings logged yet</div>
+        <div style="font-size:13px">Log your first client meeting to start tracking the relationship.</div>
+      </div>` :
+    meetings.map(m => {
+      const items = m.action_items || [];
+      const pending = items.filter(a => a.status === 'pending').length;
+      const done    = items.filter(a => a.status === 'done').length;
+      return `
+      <div class="card" style="margin-bottom:12px;border-left:3px solid ${pending ? 'var(--amber)' : 'var(--green)'}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span style="font-size:13px;font-weight:600">${MTG_TYPE_LABEL[m.type]||m.type}</span>
+              <span style="font-size:12px;color:var(--text-muted)">${m.date}</span>
+            </div>
+            ${m.notes ? `<div style="font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:8px;max-width:500px">${m.notes.replace(/\n/g,'<br>')}</div>` : ''}
+            ${items.length ? `
+            <div style="margin-bottom:8px">
+              ${items.map((a,i) => `
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--gray-100)">
+                <select onchange="updateActionStatus('${m.id}', ${i}, this.value)"
+                  style="font-size:11px;border:none;background:none;cursor:pointer;padding:2px">
+                  ${Object.entries(ACTION_STATUS).map(([v,l]) =>
+                    `<option value="${v}" ${a.status===v?'selected':''}>${l}</option>`
+                  ).join('')}
+                </select>
+                <span style="font-size:12px;color:${a.status==='done'?'var(--text-muted)':'var(--text)'};${a.status==='done'?'text-decoration:line-through':''}">${a.text}</span>
+                ${a.due ? `<span style="font-size:11px;color:var(--text-muted);margin-left:auto">Due: ${a.due}</span>` : ''}
+              </div>`).join('')}
+            </div>` : ''}
+            ${m.next_meeting ? `<div style="font-size:12px;color:var(--accent)">📅 Next meeting: ${m.next_meeting}</div>` : ''}
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="btn btn-outline btn-sm" onclick="openEditMeeting('${m.id}')">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteMeeting('${m.id}')">Delete</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+  `;
+}
+
+function openAddMeeting() {
+  editingMeetingId   = null;
+  meetingActionItems = [];
+  document.getElementById('modal-meeting-title').textContent = 'Log Meeting';
+  document.getElementById('mtg-date').value  = new Date().toISOString().split('T')[0];
+  document.getElementById('mtg-type').value  = 'call';
+  document.getElementById('mtg-notes').value = '';
+  document.getElementById('mtg-next').value  = '';
+  document.getElementById('mtg-error').style.display = 'none';
+  renderActionItems();
+  openModal('modal-meeting');
+}
+
+async function openEditMeeting(meetingId) {
+  const meetings = await api(`/api/families/${currentFamilyId}/meetings`);
+  const m = meetings?.find(x => x.id === meetingId);
+  if (!m) return;
+  editingMeetingId   = meetingId;
+  meetingActionItems = m.action_items || [];
+  document.getElementById('modal-meeting-title').textContent = 'Edit Meeting';
+  document.getElementById('mtg-date').value  = m.date;
+  document.getElementById('mtg-type').value  = m.type;
+  document.getElementById('mtg-notes').value = m.notes || '';
+  document.getElementById('mtg-next').value  = m.next_meeting || '';
+  document.getElementById('mtg-error').style.display = 'none';
+  renderActionItems();
+  openModal('modal-meeting');
+}
+
+function renderActionItems() {
+  const container = document.getElementById('mtg-action-items');
+  if (!meetingActionItems.length) {
+    container.innerHTML = `<div style="font-size:12px;color:var(--text-muted);padding:8px 0">No action items yet.</div>`;
+    return;
+  }
+  container.innerHTML = meetingActionItems.map((a, i) => `
+    <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;margin-bottom:8px">
+      <input type="text" value="${a.text}" oninput="meetingActionItems[${i}].text=this.value"
+        placeholder="Action item description"
+        style="padding:7px 10px;border:1px solid var(--gray-200);border-radius:7px;font-size:13px">
+      <input type="date" value="${a.due||''}" onchange="meetingActionItems[${i}].due=this.value"
+        style="padding:7px 10px;border:1px solid var(--gray-200);border-radius:7px;font-size:12px">
+      <select onchange="meetingActionItems[${i}].status=this.value"
+        style="padding:7px 10px;border:1px solid var(--gray-200);border-radius:7px;font-size:12px">
+        ${Object.entries(ACTION_STATUS).map(([v,l]) =>
+          `<option value="${v}" ${a.status===v?'selected':''}>${l}</option>`
+        ).join('')}
+      </select>
+      <button class="btn btn-danger btn-sm" onclick="meetingActionItems.splice(${i},1);renderActionItems()">✕</button>
+    </div>`).join('');
+}
+
+function addActionItem() {
+  meetingActionItems.push({ text: '', due: '', status: 'pending' });
+  renderActionItems();
+}
+
+async function updateActionStatus(meetingId, itemIdx, newStatus) {
+  // Quick inline update without opening modal
+  const meetings = await api(`/api/families/${currentFamilyId}/meetings`);
+  const m = meetings?.find(x => x.id === meetingId);
+  if (!m) return;
+  m.action_items[itemIdx].status = newStatus;
+  await api(`/api/families/${currentFamilyId}/meetings/${meetingId}`, {
+    method: 'PUT', body: m
+  });
+  toast('Updated', 'success');
+  renderMeetingsTab(document.getElementById('family-tab-content'));
+}
+
+async function submitMeeting() {
+  const date  = document.getElementById('mtg-date').value;
+  const errEl = document.getElementById('mtg-error');
+  if (!date) { errEl.textContent = 'Please select a date'; errEl.style.display = 'block'; return; }
+
+  const body = {
+    date,
+    type:         document.getElementById('mtg-type').value,
+    notes:        document.getElementById('mtg-notes').value.trim(),
+    action_items: meetingActionItems.filter(a => a.text.trim()),
+    next_meeting: document.getElementById('mtg-next').value,
+  };
+
+  const url    = editingMeetingId
+    ? `/api/families/${currentFamilyId}/meetings/${editingMeetingId}`
+    : `/api/families/${currentFamilyId}/meetings`;
+  const method = editingMeetingId ? 'PUT' : 'POST';
+
+  const res = await api(url, { method, body });
+  if (res?.status === 'success') {
+    toast(editingMeetingId ? 'Meeting updated!' : 'Meeting logged!', 'success');
+    closeModal('modal-meeting');
+    renderMeetingsTab(document.getElementById('family-tab-content'));
+  } else { errEl.textContent = res?.error || 'Failed to save'; errEl.style.display = 'block'; }
+}
+
+async function deleteMeeting(meetingId) {
+  if (!confirm('Delete this meeting record?')) return;
+  const res = await api(`/api/families/${currentFamilyId}/meetings/${meetingId}`, { method: 'DELETE' });
+  if (res?.status === 'success') {
+    toast('Meeting deleted', 'success');
+    renderMeetingsTab(document.getElementById('family-tab-content'));
+  } else toast('Failed to delete', 'error');
+}
 // ================================================================
 function renderMembersTab(el, members) {
   el.innerHTML = `
