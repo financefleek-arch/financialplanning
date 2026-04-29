@@ -2354,15 +2354,15 @@ function renderClientNetWorth() {
         const tL = liabKeys.reduce((s,k)=>s+(al[k]||0),0);
         const assetRows = assetKeys.filter(k=>al[k]>0).map(k=>`
           <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--gray-100)">
-            <span style="font-size:13px;color:var(--text-muted)">${ASSET_LABELS[k]||k}</span>
-            <span style="font-size:13px;font-weight:500;font-family:'DM Mono',monospace">${fmtL(al[k])}</span>
+            <span style="font-size:13px;color:var(--text-muted);font-family:'DM Sans',system-ui,sans-serif">${ASSET_LABELS[k]||k}</span>
+            <span style="font-size:13px;font-weight:500;font-family:'DM Mono',monospace;color:var(--text)">${fmtL(al[k])}</span>
           </div>`).join('');
         const liabRows = liabKeys.filter(k=>al[k]>0).map(k=>`
           <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--gray-100)">
-            <span style="font-size:13px;color:var(--text-muted)">${LIAB_LABELS[k]||k}</span>
-            <span style="font-size:13px;font-weight:500;font-family:'DM Mono',monospace">${fmtL(al[k])}</span>
+            <span style="font-size:13px;color:var(--text-muted);font-family:'DM Sans',system-ui,sans-serif">${LIAB_LABELS[k]||k}</span>
+            <span style="font-size:13px;font-weight:500;font-family:'DM Mono',monospace;color:var(--text)">${fmtL(al[k])}</span>
           </div>`).join('');
-        return `<div class="card" style="margin-bottom:0">
+        return `<div class="card" style="margin-bottom:0;font-family:'DM Sans',system-ui,sans-serif">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
             <div style="width:36px;height:36px;border-radius:50%;background:${avatarColor(m.name)};color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${inits(m.name)}</div>
             <div>
@@ -2372,16 +2372,16 @@ function renderClientNetWorth() {
           </div>
           ${assetRows}
           <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-200)">
-            <span style="font-size:13px;font-weight:600">Total Assets</span>
+            <span style="font-size:13px;font-weight:600;font-family:'DM Sans',system-ui,sans-serif">Total Assets</span>
             <span style="font-size:13px;font-weight:600;color:var(--green);font-family:'DM Mono',monospace">${fmtL(tA)}</span>
           </div>
           ${liabRows}
           <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-200)">
-            <span style="font-size:13px;font-weight:600">Total Liabilities</span>
+            <span style="font-size:13px;font-weight:600;font-family:'DM Sans',system-ui,sans-serif">Total Liabilities</span>
             <span style="font-size:13px;font-weight:600;color:var(--red);font-family:'DM Mono',monospace">${fmtL(tL)}</span>
           </div>
           <div style="display:flex;justify-content:space-between;padding:10px 0 4px">
-            <span style="font-size:15px;font-weight:700">Net Worth</span>
+            <span style="font-size:15px;font-weight:700;font-family:'DM Sans',system-ui,sans-serif">Net Worth</span>
             <span style="font-size:16px;font-weight:700;color:var(--accent);font-family:'DM Mono',monospace">${fmtL(tA-tL)}</span>
           </div>
         </div>`;
