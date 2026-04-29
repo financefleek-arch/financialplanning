@@ -2252,74 +2252,42 @@ function renderClientOverview() {
         <div style="font-size:12px">Your advisor will fill in<br>your income and expenses.</div>
       </div>`;
   } else {
-    const activeExp = EXP_KEYS.map((k,i) => ({
-      key:k, label:EXP_LABELS[k], val:expBreakdown[k]||0, color:EXP_COLORS[i]
-    })).filter(e => e.val > 0).sort((a,b) => b.val-a.val);
+    const activeExp = EXP_KEYS
+      .map((k,i) => ({ label:EXP_LABELS[k], val:expBreakdown[k]||0, color:EXP_COLORS[i] }))
+      .filter(e => e.val > 0)
+      .sort((a,b) => b.val - a.val);
 
-    const barH   = 26;
-    const gap    = 5;
-    const labelW = 88;
-    const valW   = 72;
-    const chartW = 260; // drawable bar area
-    const svgW   = labelW + chartW + valW + 10;
+    const barH   = 26, gap = 5, labelW = 88, chartW = 260, svgW = labelW + chartW + 76;
+    const rows   = [];
+    let cursor   = chartW; // tracks right edge, moves left
 
-    // Build rows: income first, then each expense stepping down, then surplus
-    let remaining = tIncome;
-    const rows = [];
+    rows.push({ label:'Income', val:tIncome, x:0, barW:chartW, color:'#10B981', bold:true });
 
-    // Income — full green bar from 0
-    rows.push({ label:'Income', val:tIncome, startX:0, barW:chartW, color:'#10B981', bold:true });
-
-    // Each expense: bar starts at (remaining-val)/income * chartW, width = val/income * chartW
     activeExp.forEach(e => {
-      const startPct = (remaining - e.val) / tIncome;
-      const barPct   = e.val / tIncome;
-      rows.push({
-        label: e.label,
-        val:   e.val,
-        startX: Math.round(startPct * chartW),
-        barW:   Math.max(3, Math.round(barPct * chartW)),
-        color:  e.color,
-        bold:   false,
-      });
-      remaining -= e.val;
+      const barW = Math.max(3, Math.round((e.val / tIncome) * chartW));
+      cursor -= barW;
+      rows.push({ label:e.label, val:e.val, x:cursor, barW, color:e.color, bold:false });
     });
 
-    // Surplus bar — starts where remaining income begins
-    const surplusPct = Math.abs(remaining) / tIncome;
-    const surplusStart = remaining >= 0
-      ? Math.round(((tIncome - remaining) / tIncome) * chartW)
-      : 0;
-    rows.push({
-      label:  'Surplus',
-      val:    remaining,
-      startX: surplusStart,
-      barW:   Math.max(3, Math.round(surplusPct * chartW)),
-      color:  remaining >= 0 ? '#3B82F6' : '#EF4444',
-      bold:   true,
-    });
+    // Surplus = leftover from cursor position (starts at 0, width = cursor)
+    rows.push({ label:'Surplus', val:remaining, x:0, barW:Math.max(3, cursor), color: remaining >= 0 ? '#3B82F6' : '#EF4444', bold:true });
 
-    const svgH = rows.length * (barH + gap) + 8;
-
+    const svgH   = rows.length * (barH + gap) + 8;
     const svgBars = rows.map((row, i) => {
       const y = i * (barH + gap) + 4;
       return `
-        <text x="${labelW - 6}" y="${y + barH/2 + 4}" font-size="11.5"
-          fill="var(--text-muted)" text-anchor="end" font-family="inherit"
-          font-weight="${row.bold ? '600' : '400'}">${row.label}</text>
-        <rect x="${labelW + row.startX}" y="${y}" width="${row.barW}" height="${barH}"
-          rx="3" fill="${row.color}"/>
-        <text x="${labelW + row.startX + row.barW + 5}" y="${y + barH/2 + 4}"
-          font-size="11.5" fill="${row.bold ? 'var(--text)' : 'var(--text-muted)'}"
-          font-family="inherit" font-weight="${row.bold ? '600' : '400'}">${fmtL(Math.abs(row.val))}</text>`;
+        <text x="${labelW-6}" y="${y+barH/2+4}" font-size="11.5" fill="var(--text-muted)"
+          text-anchor="end" font-family="inherit" font-weight="${row.bold?'600':'400'}">${row.label}</text>
+        <rect x="${labelW+row.x}" y="${y}" width="${row.barW}" height="${barH}" rx="3" fill="${row.color}"/>
+        <text x="${labelW+row.x+row.barW+5}" y="${y+barH/2+4}" font-size="11.5"
+          fill="${row.bold?'var(--text)':'var(--text-muted)'}" font-family="inherit"
+          font-weight="${row.bold?'600':'400'}">${fmtL(Math.abs(row.val))}</text>`;
     }).join('');
 
-    waterfallEl.innerHTML = `
-      <div style="overflow-x:auto">
-        <svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%;min-width:280px" xmlns="http://www.w3.org/2000/svg">
-          ${svgBars}
-        </svg>
-      </div>`;
+    waterfallEl.innerHTML = `<div style="overflow-x:auto">
+      <svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%;min-width:280px" xmlns="http://www.w3.org/2000/svg">
+        ${svgBars}
+      </svg></div>`;
   }
 
   // ── INSIGHTS ───────────────────────────────────────────────────
@@ -2348,6 +2316,9 @@ function renderClientNetWorth() {
   const assetKeys = ['real_estate','gold','equity','debt_instruments','epf_ppf','cash','vehicles','other_assets'];
   const liabKeys  = ['home_loan','car_loan','personal_loan','credit_card','other_loans'];
 
+  const ASSET_LABELS = {real_estate:'Real Estate',gold:'Gold',equity:'Equity / MF',debt_instruments:'Debt / Bonds',epf_ppf:'EPF / PPF',cash:'Cash & Bank',vehicles:'Vehicles',other_assets:'Other Assets'};
+  const LIAB_LABELS  = {home_loan:'Home Loan',car_loan:'Car Loan',personal_loan:'Personal Loan',credit_card:'Credit Card',other_loans:'Other Loans'};
+
   // Per-member cards
   document.getElementById('cl-nw-members').innerHTML = `
     <div class="grid-2">
@@ -2361,8 +2332,9 @@ function renderClientNetWorth() {
             <div><div style="font-weight:600">${m.name}</div><div style="font-size:12px;color:var(--text-muted)">${m.role==='primary'?'Primary member':'Member'}</div></div>
           </div>
           <table class="tbl">
-            ${assetKeys.filter(k=>al[k]>0).map(k=>`<tr><td style="font-size:12px;color:var(--text-muted)">${k.replace(/_/g,' ')}</td><td class="mono" style="text-align:right">${fmtL(al[k])}</td></tr>`).join('')}
+            ${assetKeys.filter(k=>al[k]>0).map(k=>`<tr><td style="font-size:12px;color:var(--text-muted)">${ASSET_LABELS[k]||k}</td><td class="mono" style="text-align:right">${fmtL(al[k])}</td></tr>`).join('')}
             <tr style="font-weight:600"><td>Total Assets</td><td class="mono" style="text-align:right;color:var(--green)">${fmtL(tA)}</td></tr>
+            ${liabKeys.filter(k=>al[k]>0).map(k=>`<tr><td style="font-size:12px;color:var(--text-muted)">${LIAB_LABELS[k]||k}</td><td class="mono" style="text-align:right">${fmtL(al[k])}</td></tr>`).join('')}
             <tr style="font-weight:600"><td>Total Liabilities</td><td class="mono" style="text-align:right;color:var(--red)">${fmtL(tL)}</td></tr>
             <tr style="font-weight:700"><td>Net Worth</td><td class="mono" style="text-align:right;color:var(--accent);font-size:15px">${fmtL(tA-tL)}</td></tr>
           </table>
