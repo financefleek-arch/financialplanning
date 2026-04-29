@@ -2260,16 +2260,18 @@ function renderClientOverview() {
     const barH   = 26, gap = 5, labelW = 88, chartW = 260, svgW = labelW + chartW + 76;
     const rows   = [];
     let cursor   = chartW; // tracks right edge, moves left
+    let remaining = tIncome; // tracks remaining income after expenses
 
     rows.push({ label:'Income', val:tIncome, x:0, barW:chartW, color:'#10B981', bold:true });
 
     activeExp.forEach(e => {
       const barW = Math.max(3, Math.round((e.val / tIncome) * chartW));
       cursor -= barW;
+      remaining -= e.val;
       rows.push({ label:e.label, val:e.val, x:cursor, barW, color:e.color, bold:false });
     });
 
-    // Surplus = leftover from cursor position (starts at 0, width = cursor)
+    // Surplus starts at 0 (left edge), width = cursor (what's left)
     rows.push({ label:'Surplus', val:remaining, x:0, barW:Math.max(3, cursor), color: remaining >= 0 ? '#3B82F6' : '#EF4444', bold:true });
 
     const svgH   = rows.length * (barH + gap) + 8;
