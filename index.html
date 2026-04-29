@@ -207,12 +207,14 @@ input,select,textarea{font-family:inherit;outline:none}
 .risk-opt{padding:11px 14px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;cursor:pointer;transition:all .15s;color:var(--text)}
 .risk-opt:hover{border-color:var(--accent);background:rgba(59,130,246,.04)}
 .risk-opt.selected{border-color:var(--accent);background:rgba(59,130,246,.08);color:var(--accent);font-weight:500}
+.risk-qnum{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
 .risk-badge{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:8px;font-size:14px;font-weight:600}
-.risk-badge.very-conservative{background:rgba(16,185,129,.1);color:#047857}
-.risk-badge.conservative{background:rgba(59,130,246,.1);color:#1D4ED8}
+.risk-badge.conservative{background:rgba(16,185,129,.1);color:#047857}
+.risk-badge.moderately-conservative{background:rgba(132,204,22,.1);color:#4D7C0F}
 .risk-badge.moderate{background:rgba(245,158,11,.1);color:#B45309}
-.risk-badge.aggressive{background:rgba(249,115,22,.1);color:#C2410C}
-.risk-badge.very-aggressive{background:rgba(239,68,68,.1);color:#B91C1C}
+.risk-badge.moderately-aggressive{background:rgba(249,115,22,.1);color:#C2410C}
+.risk-badge.aggressive{background:rgba(239,68,68,.1);color:#B91C1C}
+.risk-badge.very-aggressive{background:rgba(127,29,29,.1);color:#7F1D1D}
 
 /* ── SCORE RING ── */
 .score-ring{position:relative;width:110px;height:110px;margin:0 auto}
@@ -494,87 +496,203 @@ input,select,textarea{font-family:inherit;outline:none}
 
       <!-- CLIENT: RISK PROFILE -->
       <div class="page" id="page-cl-risk">
-        <div style="max-width:600px">
-          <h2 style="font-size:18px;font-weight:600;margin-bottom:4px">Risk Profile Assessment</h2>
-          <p style="font-size:13px;color:var(--text-muted);margin-bottom:24px;line-height:1.5">Answer these 5 questions honestly — your advisor will use this to recommend suitable investments.</p>
-
-          <!-- Result card (shown after completion) -->
+        <div style="max-width:620px">
           <div id="risk-result" style="display:none;margin-bottom:20px"></div>
-
-          <!-- Questionnaire -->
           <div id="risk-form">
-            <div class="card" style="margin-bottom:14px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-                <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
-                <div style="font-size:14px;font-weight:500">How long can you keep this money invested without needing it?</div>
+            <h2 style="font-size:18px;font-weight:600;margin-bottom:4px">Risk Profile Assessment</h2>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.5">Answer all 12 questions honestly. Your advisor will use this to recommend suitable investments. Valid for 1 year from submission.</p>
+            <div style="background:var(--gray-200);border-radius:4px;height:6px;margin-bottom:24px">
+              <div id="risk-progress-bar" style="height:100%;border-radius:4px;background:var(--accent);transition:width .3s;width:0%"></div>
+            </div>
+
+            <!-- SECTION 1: RISK TOLERANCE -->
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+              <div><div style="font-size:14px;font-weight:600">Risk Tolerance</div><div style="font-size:12px;color:var(--text-muted)">Your willingness to take risk and endure losses</div></div>
+            </div>
+
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Investment Experience</div>
+              <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
+                <div class="risk-qnum" id="qnum-1">1</div>
+                <div style="font-size:13.5px;font-weight:500;line-height:1.5">How long have you been investing in Equity / Stocks / Mutual Funds?</div>
               </div>
-              <div class="risk-options" id="q1">
-                <div class="risk-opt" onclick="selectRisk(1,1,this)" data-val="1">Less than 1 year</div>
-                <div class="risk-opt" onclick="selectRisk(1,2,this)" data-val="2">1–3 years</div>
-                <div class="risk-opt" onclick="selectRisk(1,3,this)" data-val="3">3–5 years</div>
-                <div class="risk-opt" onclick="selectRisk(1,4,this)" data-val="4">5–10 years</div>
-                <div class="risk-opt" onclick="selectRisk(1,5,this)" data-val="5">More than 10 years</div>
+              <div class="risk-options">
+                <div class="risk-opt" onclick="selectRisk(1,1,this)">Less than 1 year</div>
+                <div class="risk-opt" onclick="selectRisk(1,2,this)">Around 1–3 years</div>
+                <div class="risk-opt" onclick="selectRisk(1,3,this)">Around 4–6 years</div>
+                <div class="risk-opt" onclick="selectRisk(1,4,this)">More than 7 years</div>
               </div>
             </div>
 
-            <div class="card" style="margin-bottom:14px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-                <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
-                <div style="font-size:14px;font-weight:500">Your portfolio drops 20% in a month. What do you do?</div>
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Market Fluctuations</div>
+              <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
+                <div class="risk-qnum" id="qnum-2">2</div>
+                <div style="font-size:13.5px;font-weight:500;line-height:1.5">How do you react to a significant decline (20–40% drop) in your investments?</div>
               </div>
-              <div class="risk-options" id="q2">
-                <div class="risk-opt" onclick="selectRisk(2,1,this)">Sell everything immediately — I can't handle this loss</div>
-                <div class="risk-opt" onclick="selectRisk(2,2,this)">Sell some to reduce exposure and feel safer</div>
-                <div class="risk-opt" onclick="selectRisk(2,3,this)">Hold and wait for recovery — it's uncomfortable but okay</div>
-                <div class="risk-opt" onclick="selectRisk(2,4,this)">Hold and consider buying more if it drops further</div>
-                <div class="risk-opt" onclick="selectRisk(2,5,this)">Definitely buy more — market dips are opportunities</div>
-              </div>
-            </div>
-
-            <div class="card" style="margin-bottom:14px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-                <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
-                <div style="font-size:14px;font-weight:500">How stable is your primary income?</div>
-              </div>
-              <div class="risk-options" id="q3">
-                <div class="risk-opt" onclick="selectRisk(3,1,this)">Very unstable — irregular / contract / seasonal work</div>
-                <div class="risk-opt" onclick="selectRisk(3,2,this)">Somewhat unstable — business with variable income</div>
-                <div class="risk-opt" onclick="selectRisk(3,3,this)">Moderately stable — employed but industry is uncertain</div>
-                <div class="risk-opt" onclick="selectRisk(3,4,this)">Stable — salaried with good job security</div>
-                <div class="risk-opt" onclick="selectRisk(3,5,this)">Very stable — government / PSU / multiple income sources</div>
+              <div class="risk-options">
+                <div class="risk-opt" onclick="selectRisk(2,1,this)">I would sell all my investments</div>
+                <div class="risk-opt" onclick="selectRisk(2,2,this)">I would sell some of my investments</div>
+                <div class="risk-opt" onclick="selectRisk(2,3,this)">I would do nothing and wait</div>
+                <div class="risk-opt" onclick="selectRisk(2,4,this)">I would buy more at the lower price</div>
               </div>
             </div>
 
-            <div class="card" style="margin-bottom:14px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-                <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
-                <div style="font-size:14px;font-weight:500">How many people financially depend on you?</div>
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Loss Taking Appetite</div>
+              <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
+                <div class="risk-qnum" id="qnum-3">3</div>
+                <div style="font-size:13.5px;font-weight:500;line-height:1.5">How comfortable are you with taking risks / losses to achieve better returns?</div>
               </div>
-              <div class="risk-options" id="q4">
-                <div class="risk-opt" onclick="selectRisk(4,1,this)">5 or more dependants</div>
-                <div class="risk-opt" onclick="selectRisk(4,2,this)">3–4 dependants</div>
-                <div class="risk-opt" onclick="selectRisk(4,3,this)">1–2 dependants</div>
-                <div class="risk-opt" onclick="selectRisk(4,4,this)">No dependants but supporting myself</div>
-                <div class="risk-opt" onclick="selectRisk(4,5,this)">No dependants — dual income household</div>
+              <div class="risk-options">
+                <div class="risk-opt" onclick="selectRisk(3,1,this)">Not comfortable at all</div>
+                <div class="risk-opt" onclick="selectRisk(3,2,this)">Slightly comfortable</div>
+                <div class="risk-opt" onclick="selectRisk(3,3,this)">Moderately comfortable</div>
+                <div class="risk-opt" onclick="selectRisk(3,4,this)">Very comfortable</div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Portfolio Drops</div>
+              <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
+                <div class="risk-qnum" id="qnum-4">4</div>
+                <div style="font-size:13.5px;font-weight:500;line-height:1.5">What level of temporary decrease in portfolio value can you tolerate?</div>
+              </div>
+              <div class="risk-options">
+                <div class="risk-opt" onclick="selectRisk(4,1,this)">Up to −10%</div>
+                <div class="risk-opt" onclick="selectRisk(4,2,this)">−10% to −25%</div>
+                <div class="risk-opt" onclick="selectRisk(4,3,this)">−25% to −40%</div>
+                <div class="risk-opt" onclick="selectRisk(4,4,this)">More than −40%</div>
+              </div>
+            </div>
+
+            <!-- SECTION 2: RISK CAPACITY -->
+            <div style="display:flex;align-items:center;gap:10px;margin:20px 0 14px">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+              <div><div style="font-size:14px;font-weight:600">Risk Capacity</div><div style="font-size:12px;color:var(--text-muted)">Your financial ability to endure potential losses</div></div>
+            </div>
+
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Income Stability</div>
+              <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
+                <div class="risk-qnum" id="qnum-5">5</div>
+                <div style="font-size:13.5px;font-weight:500;line-height:1.5">How stable is your current income / job or business?</div>
+              </div>
+              <div class="risk-options">
+                <div class="risk-opt" onclick="selectRisk(5,1,this)">Very unstable</div>
+                <div class="risk-opt" onclick="selectRisk(5,2,this)">Somewhat unstable</div>
+                <div class="risk-opt" onclick="selectRisk(5,3,this)">Stable</div>
+                <div class="risk-opt" onclick="selectRisk(5,4,this)">Very stable</div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Emergency Funds</div>
+              <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
+                <div class="risk-qnum" id="qnum-6">6</div>
+                <div style="font-size:13.5px;font-weight:500;line-height:1.5">How many months of living expenses do you have in an Emergency Fund?</div>
+              </div>
+              <div class="risk-options">
+                <div class="risk-opt" onclick="selectRisk(6,1,this)">Less than 3 months</div>
+                <div class="risk-opt" onclick="selectRisk(6,2,this)">Around 3–6 months</div>
+                <div class="risk-opt" onclick="selectRisk(6,3,this)">Around 6–12 months</div>
+                <div class="risk-opt" onclick="selectRisk(6,4,this)">More than 12 months</div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Financial Obligations</div>
+              <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
+                <div class="risk-qnum" id="qnum-7">7</div>
+                <div style="font-size:13.5px;font-weight:500;line-height:1.5">Do you have near-term financial obligations that may require you to access investments?</div>
+              </div>
+              <div class="risk-options">
+                <div class="risk-opt" onclick="selectRisk(7,1,this)">Yes, significant obligations</div>
+                <div class="risk-opt" onclick="selectRisk(7,2,this)">Yes, some obligations</div>
+                <div class="risk-opt" onclick="selectRisk(7,3,this)">Few obligations</div>
+                <div class="risk-opt" onclick="selectRisk(7,4,this)">No obligations</div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Current Investments</div>
+              <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
+                <div class="risk-qnum" id="qnum-8">8</div>
+                <div style="font-size:13.5px;font-weight:500;line-height:1.5">How would you characterise your current investments?</div>
+              </div>
+              <div class="risk-options">
+                <div class="risk-opt" onclick="selectRisk(8,1,this)">Mostly safe — FDs, PF, savings accounts</div>
+                <div class="risk-opt" onclick="selectRisk(8,2,this)">Somewhat safe with some risky investments</div>
+                <div class="risk-opt" onclick="selectRisk(8,3,this)">Equal mix of safe and risky</div>
+                <div class="risk-opt" onclick="selectRisk(8,4,this)">Mostly risky — stocks, equity, direct MFs</div>
+              </div>
+            </div>
+
+            <!-- SECTION 3: RISK REQUIRED -->
+            <div style="display:flex;align-items:center;gap:10px;margin:20px 0 14px">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+              <div><div style="font-size:14px;font-weight:600">Risk Required</div><div style="font-size:12px;color:var(--text-muted)">The risk needed to achieve your investment goals</div></div>
+            </div>
+
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Return Expectations</div>
+              <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
+                <div class="risk-qnum" id="qnum-9">9</div>
+                <div style="font-size:13.5px;font-weight:500;line-height:1.5">What is your expected annual return on investments?</div>
+              </div>
+              <div class="risk-options">
+                <div class="risk-opt" onclick="selectRisk(9,1,this)">Less than 6%</div>
+                <div class="risk-opt" onclick="selectRisk(9,2,this)">Around 6–9%</div>
+                <div class="risk-opt" onclick="selectRisk(9,3,this)">Around 9–12%</div>
+                <div class="risk-opt" onclick="selectRisk(9,4,this)">More than 12%</div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Investment Goals</div>
+              <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
+                <div class="risk-qnum" id="qnum-10">10</div>
+                <div style="font-size:13.5px;font-weight:500;line-height:1.5">What is your primary investment objective?</div>
+              </div>
+              <div class="risk-options">
+                <div class="risk-opt" onclick="selectRisk(10,1,this)">Wealth Preservation (keep investments intact)</div>
+                <div class="risk-opt" onclick="selectRisk(10,2,this)">Wealth Distribution (generate regular income)</div>
+                <div class="risk-opt" onclick="selectRisk(10,3,this)">Nominal Wealth Creation</div>
+                <div class="risk-opt" onclick="selectRisk(10,4,this)">Aggressive Wealth Creation</div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:12px">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Time Horizon</div>
+              <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
+                <div class="risk-qnum" id="qnum-11">11</div>
+                <div style="font-size:13.5px;font-weight:500;line-height:1.5">How long do you plan to invest before withdrawing?</div>
+              </div>
+              <div class="risk-options">
+                <div class="risk-opt" onclick="selectRisk(11,1,this)">Less than 3 years</div>
+                <div class="risk-opt" onclick="selectRisk(11,2,this)">Around 3–5 years</div>
+                <div class="risk-opt" onclick="selectRisk(11,3,this)">Around 5–10 years</div>
+                <div class="risk-opt" onclick="selectRisk(11,4,this)">More than 10 years</div>
               </div>
             </div>
 
             <div class="card" style="margin-bottom:20px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-                <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">5</div>
-                <div style="font-size:14px;font-weight:500">How familiar are you with market-linked investments?</div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Time Flexibility</div>
+              <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
+                <div class="risk-qnum" id="qnum-12">12</div>
+                <div style="font-size:13.5px;font-weight:500;line-height:1.5">How flexible are you with your investment time horizon?</div>
               </div>
-              <div class="risk-options" id="q5">
-                <div class="risk-opt" onclick="selectRisk(5,1,this)">No experience — I prefer FD and savings accounts only</div>
-                <div class="risk-opt" onclick="selectRisk(5,2,this)">Some experience — I have a few mutual funds</div>
-                <div class="risk-opt" onclick="selectRisk(5,3,this)">Moderate — I invest regularly in MFs and understand NAV/XIRR</div>
-                <div class="risk-opt" onclick="selectRisk(5,4,this)">Good — I invest in stocks and MFs, track markets regularly</div>
-                <div class="risk-opt" onclick="selectRisk(5,5,this)">Expert — I actively manage a diversified portfolio</div>
+              <div class="risk-options">
+                <div class="risk-opt" onclick="selectRisk(12,1,this)">Not flexible at all</div>
+                <div class="risk-opt" onclick="selectRisk(12,2,this)">Slightly flexible</div>
+                <div class="risk-opt" onclick="selectRisk(12,3,this)">Somewhat flexible</div>
+                <div class="risk-opt" onclick="selectRisk(12,4,this)">Very flexible</div>
               </div>
             </div>
 
             <div id="risk-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--red);font-size:13px;padding:10px 12px;border-radius:7px;margin-bottom:14px"></div>
-            <button class="btn btn-blue" onclick="submitRiskProfile()" style="width:100%">Submit Assessment</button>
+            <button class="btn btn-blue" id="risk-submit-btn" onclick="submitRiskProfile()" style="width:100%">Submit Assessment (0/12)</button>
           </div>
         </div>
       </div>
@@ -1210,46 +1328,42 @@ function renderFamilyTab(tab) {
 
 function renderAdvisorRiskProfile(el, members, memberData) {
   const profileMeta = {
-    'very-conservative': { label:'Very Conservative', color:'#047857', bg:'rgba(16,185,129,.1)' },
-    'conservative':      { label:'Conservative',       color:'#1D4ED8', bg:'rgba(59,130,246,.1)' },
-    'moderate':          { label:'Moderate',           color:'#B45309', bg:'rgba(245,158,11,.1)' },
-    'aggressive':        { label:'Aggressive',         color:'#C2410C', bg:'rgba(249,115,22,.1)' },
-    'very-aggressive':   { label:'Very Aggressive',    color:'#B91C1C', bg:'rgba(239,68,68,.1)'  },
+    'conservative':            { label:'Conservative',           color:'#047857', bg:'rgba(16,185,129,.1)' },
+    'moderately-conservative': { label:'Mod. Conservative',      color:'#4D7C0F', bg:'rgba(132,204,22,.1)' },
+    'moderate':                { label:'Moderate',               color:'#B45309', bg:'rgba(245,158,11,.1)' },
+    'moderately-aggressive':   { label:'Mod. Aggressive',        color:'#C2410C', bg:'rgba(249,115,22,.1)' },
+    'aggressive':              { label:'Aggressive',             color:'#B91C1C', bg:'rgba(239,68,68,.1)'  },
+    'very-aggressive':         { label:'Very Aggressive',        color:'#7F1D1D', bg:'rgba(127,29,29,.1)'  },
   };
 
   el.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:14px">
       ${members.map(m => {
-        const rp = memberData[m.id]?.risk_profile || {};
+        const rp   = memberData[m.id]?.risk_profile || {};
         const meta = rp.profile ? profileMeta[rp.profile] : null;
+        const ss   = rp.section_scores || {};
         return `
         <div class="card">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:${meta?'16px':'0'}">
             <div style="width:36px;height:36px;border-radius:50%;background:${avatarColor(m.name)};color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${inits(m.name)}</div>
             <div style="flex:1">
               <div style="font-weight:600;font-size:14px">${m.name}</div>
-              ${rp.assessed_at ? `<div style="font-size:11px;color:var(--text-muted)">Self-assessed on ${rp.assessed_at}</div>` : '<div style="font-size:11px;color:var(--text-muted)">Not yet assessed</div>'}
+              ${rp.assessed_at ? `<div style="font-size:11px;color:var(--text-muted)">Assessed ${rp.assessed_at}${rp.valid_until?' · Valid until '+rp.valid_until:''}</div>`
+                               : '<div style="font-size:11px;color:var(--text-muted)">Not yet assessed</div>'}
             </div>
-            ${meta ? `<div class="risk-badge ${rp.profile}" style="padding:7px 14px;font-size:13px">${meta.label}</div>` : '<span class="badge badge-gray">Pending</span>'}
+            ${meta ? `<div class="risk-badge ${rp.profile}" style="padding:7px 14px;font-size:12px">${meta.label}</div>`
+                   : '<span class="badge badge-gray">Pending</span>'}
           </div>
           ${meta ? `
-          <div style="background:var(--gray-50);border-radius:9px;padding:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
-            <div>
-              <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Score</div>
-              <div style="font-size:18px;font-weight:700;color:${meta.color}">${rp.score}/25</div>
-            </div>
-            <div>
-              <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Horizon</div>
-              <div style="font-size:13px;font-weight:600">${['<1 yr','1–3 yr','3–5 yr','5–10 yr','10+ yr'][((rp.answers||{})[1]||3)-1]}</div>
-            </div>
-            <div>
-              <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Experience</div>
-              <div style="font-size:13px;font-weight:600">${['None','Some','Moderate','Good','Expert'][((rp.answers||{})[5]||3)-1]}</div>
-            </div>
-          </div>` : `
-          <div style="color:var(--text-muted);font-size:13px;padding:8px 0">
-            Client hasn't completed the risk assessment yet. Ask them to visit the Risk Profile page in their app.
-          </div>`}
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
+            ${[['Score',`${rp.score}/48`],['Tolerance',`${ss.tolerance||0}/16`],['Capacity',`${ss.capacity||0}/16`],['Required',`${ss.required||0}/16`]].map(([l,v])=>`
+            <div style="background:var(--gray-50);border-radius:7px;padding:8px;text-align:center">
+              <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">${l}</div>
+              <div style="font-size:14px;font-weight:700;color:${meta.color}">${v}</div>
+            </div>`).join('')}
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);line-height:1.5">${RISK_PROFILES.find(p=>p.key===rp.profile)?.desc||''}</div>
+          ` : `<div style="color:var(--text-muted);font-size:13px;padding:4px 0">Client hasn't completed the risk assessment yet.</div>`}
         </div>`;
       }).join('')}
     </div>`;
@@ -2203,54 +2317,96 @@ async function deleteMemberFromTab(memberId, name) {
 }
 
 // ================================================================
-//  CLIENT: RISK PROFILE QUESTIONNAIRE
+//  CLIENT: RISK PROFILE QUESTIONNAIRE (12 questions, 3 sections)
 // ================================================================
+// Scoring: 12 questions × 4 options (1–4 pts each) = 12–48 total
+// Sections weighted equally: Tolerance (Q1-4), Capacity (Q5-8), Required (Q9-12)
 const RISK_PROFILES = [
-  { min:5,  max:9,  key:'very-conservative', label:'Very Conservative',
-    desc:'You prioritise safety above all. Suitable investments: FD, debt funds, liquid funds, government bonds.' },
-  { min:10, max:13, key:'conservative',       label:'Conservative',
-    desc:'You prefer low-risk investments with stable returns. Suitable: debt-heavy hybrid funds, short-term debt MFs.' },
-  { min:14, max:17, key:'moderate',           label:'Moderate',
-    desc:'You can accept some volatility for better returns. Suitable: balanced advantage funds, multi-cap equity funds.' },
-  { min:18, max:21, key:'aggressive',         label:'Aggressive',
-    desc:'You are comfortable with market volatility for higher growth. Suitable: large-cap, flexi-cap equity funds.' },
-  { min:22, max:25, key:'very-aggressive',    label:'Very Aggressive',
-    desc:'You seek maximum growth and can handle significant volatility. Suitable: mid/small-cap, sector funds, direct equity.' },
+  { min:12, max:19, key:'conservative',           label:'Conservative',
+    color:'#047857', bg:'rgba(16,185,129,.1)',
+    desc:'You prioritise capital safety. Recommended: FD, liquid funds, short-term debt funds, government bonds.',
+    allocation:'Debt 80% · Equity 10% · Gold/Others 10%' },
+  { min:20, max:26, key:'moderately-conservative', label:'Moderately Conservative',
+    color:'#4D7C0F', bg:'rgba(132,204,22,.1)',
+    desc:'You prefer stability with modest growth. Recommended: debt-heavy hybrid funds, arbitrage funds, short-term MFs.',
+    allocation:'Debt 65% · Equity 25% · Gold/Others 10%' },
+  { min:27, max:33, key:'moderate',                label:'Moderate',
+    color:'#B45309', bg:'rgba(245,158,11,.1)',
+    desc:'You balance growth and safety. Recommended: balanced advantage funds, multi-cap equity, hybrid MFs.',
+    allocation:'Debt 45% · Equity 45% · Gold/Others 10%' },
+  { min:34, max:39, key:'moderately-aggressive',   label:'Moderately Aggressive',
+    color:'#C2410C', bg:'rgba(249,115,22,.1)',
+    desc:'You seek above-average growth with some volatility tolerance. Recommended: large-cap, flexi-cap equity funds.',
+    allocation:'Debt 25% · Equity 65% · Gold/Others 10%' },
+  { min:40, max:44, key:'aggressive',              label:'Aggressive',
+    color:'#B91C1C', bg:'rgba(239,68,68,.1)',
+    desc:'You can handle significant volatility for high returns. Recommended: mid-cap, small-cap, sector equity funds.',
+    allocation:'Debt 10% · Equity 80% · Gold/Others 10%' },
+  { min:45, max:48, key:'very-aggressive',         label:'Very Aggressive',
+    color:'#7F1D1D', bg:'rgba(127,29,29,.1)',
+    desc:'You seek maximum growth and accept high volatility. Recommended: small-cap, thematic, direct equity, international funds.',
+    allocation:'Debt 5% · Equity 90% · Gold/Others 5%' },
 ];
+
+// Speedometer gauge positions (degrees from left, 0=conservative, 5=very-aggressive)
+const GAUGE_ANGLES = { 'conservative':195, 'moderately-conservative':222, 'moderate':249, 'moderately-aggressive':276, 'aggressive':303, 'very-aggressive':330 };
 
 const riskAnswers = {};
 
 function selectRisk(qNum, val, el) {
-  // Deselect siblings
   el.closest('.risk-options').querySelectorAll('.risk-opt').forEach(o => o.classList.remove('selected'));
   el.classList.add('selected');
   riskAnswers[qNum] = val;
-  // Mark question number complete
-  const numEl = el.closest('.card').querySelector('div[style*="border-radius:50%"]');
+
+  // Update number circle to checkmark
+  const numEl = document.getElementById(`qnum-${qNum}`);
   if (numEl) { numEl.style.background = 'var(--green)'; numEl.textContent = '✓'; }
+
+  // Update progress bar and button
+  const count = Object.keys(riskAnswers).length;
+  const pct   = (count / 12) * 100;
+  const bar   = document.getElementById('risk-progress-bar');
+  if (bar) bar.style.width = pct + '%';
+  const btn = document.getElementById('risk-submit-btn');
+  if (btn) btn.textContent = `Submit Assessment (${count}/12)`;
 }
 
 async function submitRiskProfile() {
   const errEl = document.getElementById('risk-error');
   errEl.style.display = 'none';
-
-  // Check all 5 answered
   const answered = Object.keys(riskAnswers).length;
-  if (answered < 5) {
-    errEl.textContent = `Please answer all 5 questions (${answered}/5 answered)`;
+  if (answered < 12) {
+    errEl.textContent = `Please answer all 12 questions (${answered}/12 answered)`;
     errEl.style.display = 'block';
+    // Scroll to first unanswered
+    for (let i = 1; i <= 12; i++) {
+      if (!riskAnswers[i]) {
+        document.getElementById(`qnum-${i}`)?.scrollIntoView({ behavior:'smooth', block:'center' });
+        break;
+      }
+    }
     return;
   }
 
   const score   = Object.values(riskAnswers).reduce((s, v) => s + v, 0);
   const profile = RISK_PROFILES.find(p => score >= p.min && score <= p.max);
+  const today   = new Date();
+  const validDate = new Date(today);
+  validDate.setFullYear(validDate.getFullYear() + 1);
+  const fmt = (d) => d.toLocaleDateString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric' });
 
   const payload = {
     score,
-    profile:    profile.key,
-    label:      profile.label,
-    answers:    riskAnswers,
-    assessed_at: new Date().toLocaleDateString('en-IN')
+    profile:      profile.key,
+    label:        profile.label,
+    answers:      {...riskAnswers},
+    assessed_at:  fmt(today),
+    valid_until:  fmt(validDate),
+    section_scores: {
+      tolerance: [1,2,3,4].reduce((s,k)=>s+(riskAnswers[k]||0),0),
+      capacity:  [5,6,7,8].reduce((s,k)=>s+(riskAnswers[k]||0),0),
+      required:  [9,10,11,12].reduce((s,k)=>s+(riskAnswers[k]||0),0),
+    }
   };
 
   const res = await api(
@@ -2259,26 +2415,86 @@ async function submitRiskProfile() {
   );
 
   if (res?.status === 'success') {
-    showRiskResult(profile, score);
+    showRiskResult(profile, payload);
   } else {
     errEl.textContent = res?.error || 'Failed to save. Please try again.';
     errEl.style.display = 'block';
   }
 }
 
-function showRiskResult(profile, score) {
+function renderGauge(profileKey) {
+  const angle = GAUGE_ANGLES[profileKey] || 249;
+  const labels = [
+    { key:'conservative',           label:'Conservative',           x:18,  y:72, anchor:'start' },
+    { key:'moderately-conservative',label:'Mod. Conservative',      x:28,  y:38, anchor:'start' },
+    { key:'moderate',               label:'Moderate',               x:85,  y:20, anchor:'middle' },
+    { key:'moderately-aggressive',  label:'Mod. Aggressive',        x:145, y:20, anchor:'middle' },
+    { key:'aggressive',             label:'Aggressive',             x:172, y:38, anchor:'end' },
+    { key:'very-aggressive',        label:'Very Aggressive',        x:182, y:72, anchor:'end' },
+  ];
+  const colors  = ['#047857','#4D7C0F','#B45309','#C2410C','#B91C1C','#7F1D1D'];
+  const segAngs = [180,207,234,261,288,315,342]; // start angles for 6 segments
+
+  // SVG needle
+  const rad    = (angle * Math.PI) / 180;
+  const cx=100, cy=90, r=70;
+  const nx = cx + r * Math.cos(rad);
+  const ny = cy + r * Math.sin(rad);
+
+  return `<svg viewBox="0 0 200 105" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:300px;display:block;margin:0 auto 16px">
+    ${colors.map((c,i) => {
+      const a1 = (segAngs[i] * Math.PI) / 180;
+      const a2 = (segAngs[i+1] * Math.PI) / 180;
+      const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+      const x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
+      const oi=r-14;
+      const ix1=cx+oi*Math.cos(a1),iy1=cy+oi*Math.sin(a1);
+      const ix2=cx+oi*Math.cos(a2),iy2=cy+oi*Math.sin(a2);
+      const active = labels[i].key === profileKey;
+      return `<path d="M ${ix1} ${iy1} A ${oi} ${oi} 0 0 1 ${ix2} ${iy2} L ${x2} ${y2} A ${r} ${r} 0 0 0 ${x1} ${y1} Z"
+        fill="${c}" opacity="${active?1:.35}" stroke="#fff" stroke-width=".8"/>`;
+    }).join('')}
+    <!-- Needle -->
+    <line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="#1E293B" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="${cx}" cy="${cy}" r="5" fill="#1E293B"/>
+    <circle cx="${cx}" cy="${cy}" r="2.5" fill="#fff"/>
+  </svg>`;
+}
+
+function showRiskResult(profile, payload) {
   document.getElementById('risk-form').style.display = 'none';
   const el = document.getElementById('risk-result');
   el.style.display = 'block';
+
+  const ss = payload.section_scores || {};
+  const maxSec = 16;
+
   el.innerHTML = `
-    <div class="card" style="text-align:center;padding:32px 24px">
-      <div style="font-size:40px;margin-bottom:16px">🎯</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;letter-spacing:.05em;text-transform:uppercase">Your Risk Profile</div>
-      <div class="risk-badge ${profile.key}" style="margin:0 auto 16px;font-size:18px;padding:12px 24px">${profile.label}</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:24px">Score: ${score}/25</div>
-      <p style="font-size:13.5px;color:var(--text);line-height:1.7;margin-bottom:28px">${profile.desc}</p>
-      <div style="background:var(--gray-50);border-radius:10px;padding:14px;font-size:13px;color:var(--text-muted);margin-bottom:24px">
-        ✅ Your profile has been saved and shared with your advisor. They will use this to personalise your investment recommendations.
+    <div class="card" style="text-align:center;padding:28px 20px;margin-bottom:14px">
+      <div style="font-size:12px;color:var(--text-muted);letter-spacing:.05em;text-transform:uppercase;margin-bottom:10px">Your Risk Profile</div>
+      ${renderGauge(profile.key)}
+      <div class="risk-badge ${profile.key}" style="margin:0 auto 10px;font-size:16px;padding:10px 22px">${profile.label}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Score: ${payload.score}/48</div>
+      <p style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:16px;text-align:left">${profile.desc}</p>
+      <div style="background:var(--gray-50);border-radius:9px;padding:12px;font-size:12px;color:var(--text-muted);text-align:left;margin-bottom:16px">
+        <div style="font-weight:600;color:var(--text);margin-bottom:4px">Suggested Allocation</div>
+        ${profile.allocation}
+      </div>
+
+      <!-- Section scores -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+        ${[['Risk Tolerance',ss.tolerance||0],['Risk Capacity',ss.capacity||0],['Risk Required',ss.required||0]].map(([l,v])=>`
+        <div style="background:var(--gray-50);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">${l}</div>
+          <div style="font-size:16px;font-weight:700;color:var(--accent)">${v}/${maxSec}</div>
+          <div style="height:4px;background:var(--gray-200);border-radius:2px;margin-top:6px;overflow:hidden">
+            <div style="height:100%;width:${(v/maxSec*100).toFixed(0)}%;background:var(--accent);border-radius:2px"></div>
+          </div>
+        </div>`).join('')}
+      </div>
+
+      <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:10px;font-size:12px;color:var(--green);margin-bottom:16px">
+        ✅ Saved and shared with your advisor · Valid until ${payload.valid_until}
       </div>
       <button class="btn btn-outline" onclick="retakeRiskAssessment()" style="width:100%">Retake Assessment</button>
     </div>`;
@@ -2286,25 +2502,27 @@ function showRiskResult(profile, score) {
 
 function retakeRiskAssessment() {
   Object.keys(riskAnswers).forEach(k => delete riskAnswers[k]);
-  // Reset all selections and question number indicators
   document.querySelectorAll('.risk-opt').forEach(o => o.classList.remove('selected'));
-  document.querySelectorAll('#risk-form .card div[style*="border-radius:50%"]').forEach((el, i) => {
-    el.style.background = 'var(--accent)';
-    el.textContent = i + 1;
-  });
+  for (let i = 1; i <= 12; i++) {
+    const el = document.getElementById(`qnum-${i}`);
+    if (el) { el.style.background = 'var(--accent)'; el.textContent = i; }
+  }
+  const bar = document.getElementById('risk-progress-bar');
+  if (bar) bar.style.width = '0%';
+  const btn = document.getElementById('risk-submit-btn');
+  if (btn) btn.textContent = 'Submit Assessment (0/12)';
   document.getElementById('risk-result').style.display = 'none';
   document.getElementById('risk-form').style.display = 'block';
   document.getElementById('risk-error').style.display = 'none';
 }
 
 async function loadRiskProfile() {
-  // Load existing answers if already assessed
   const data = await api(`/api/families/${auth.familyId}/data`);
   if (!data) return;
   const rp = data.member_data?.[auth.memberId]?.risk_profile;
   if (rp?.profile) {
     const profile = RISK_PROFILES.find(p => p.key === rp.profile);
-    if (profile) showRiskResult(profile, rp.score);
+    if (profile) showRiskResult(profile, rp);
   }
 }
 
