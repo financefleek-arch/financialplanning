@@ -2342,31 +2342,53 @@ function renderClientNetWorth() {
 
   const ASSET_LABELS = {real_estate:'Real Estate',gold:'Gold',equity:'Equity / MF',debt_instruments:'Debt / Bonds',epf_ppf:'EPF / PPF',cash:'Cash & Bank',vehicles:'Vehicles',other_assets:'Other Assets'};
   const LIAB_LABELS  = {home_loan:'Home Loan',car_loan:'Car Loan',personal_loan:'Personal Loan',credit_card:'Credit Card',other_loans:'Other Loans'};
+  const font = "'DM Sans', system-ui, sans-serif";
 
-  // Per-member cards
+  // Per-member cards — single column if only one member
+  const gridStyle = members.length === 1 ? '' : 'display:grid;grid-template-columns:1fr 1fr;gap:16px';
   document.getElementById('cl-nw-members').innerHTML = `
-    <div class="grid-2">
+    <div style="${gridStyle}">
       ${members.map(m => {
         const al = memberData[m.id]?.assets_liabilities || {};
         const tA = assetKeys.reduce((s,k)=>s+(al[k]||0),0);
         const tL = liabKeys.reduce((s,k)=>s+(al[k]||0),0);
-        return `<div class="card">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-            <div style="width:36px;height:36px;border-radius:50%;background:${avatarColor(m.name)};color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">${inits(m.name)}</div>
-            <div><div style="font-weight:600">${m.name}</div><div style="font-size:12px;color:var(--text-muted)">${m.role==='primary'?'Primary member':'Member'}</div></div>
+        const assetRows = assetKeys.filter(k=>al[k]>0).map(k=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--gray-100)">
+            <span style="font-size:13px;color:var(--text-muted)">${ASSET_LABELS[k]||k}</span>
+            <span style="font-size:13px;font-weight:500;font-family:'DM Mono',monospace">${fmtL(al[k])}</span>
+          </div>`).join('');
+        const liabRows = liabKeys.filter(k=>al[k]>0).map(k=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--gray-100)">
+            <span style="font-size:13px;color:var(--text-muted)">${LIAB_LABELS[k]||k}</span>
+            <span style="font-size:13px;font-weight:500;font-family:'DM Mono',monospace">${fmtL(al[k])}</span>
+          </div>`).join('');
+        return `<div class="card" style="margin-bottom:0">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <div style="width:36px;height:36px;border-radius:50%;background:${avatarColor(m.name)};color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${inits(m.name)}</div>
+            <div>
+              <div style="font-size:14px;font-weight:600">${m.name}</div>
+              <div style="font-size:12px;color:var(--text-muted)">${m.role==='primary'?'Primary member':'Member'}</div>
+            </div>
           </div>
-          <table class="tbl">
-            ${assetKeys.filter(k=>al[k]>0).map(k=>`<tr><td style="font-size:12px;color:var(--text-muted)">${ASSET_LABELS[k]||k}</td><td class="mono" style="text-align:right">${fmtL(al[k])}</td></tr>`).join('')}
-            <tr style="font-weight:600"><td>Total Assets</td><td class="mono" style="text-align:right;color:var(--green)">${fmtL(tA)}</td></tr>
-            ${liabKeys.filter(k=>al[k]>0).map(k=>`<tr><td style="font-size:12px;color:var(--text-muted)">${LIAB_LABELS[k]||k}</td><td class="mono" style="text-align:right">${fmtL(al[k])}</td></tr>`).join('')}
-            <tr style="font-weight:600"><td>Total Liabilities</td><td class="mono" style="text-align:right;color:var(--red)">${fmtL(tL)}</td></tr>
-            <tr style="font-weight:700"><td>Net Worth</td><td class="mono" style="text-align:right;color:var(--accent);font-size:15px">${fmtL(tA-tL)}</td></tr>
-          </table>
+          ${assetRows}
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-200)">
+            <span style="font-size:13px;font-weight:600">Total Assets</span>
+            <span style="font-size:13px;font-weight:600;color:var(--green);font-family:'DM Mono',monospace">${fmtL(tA)}</span>
+          </div>
+          ${liabRows}
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-200)">
+            <span style="font-size:13px;font-weight:600">Total Liabilities</span>
+            <span style="font-size:13px;font-weight:600;color:var(--red);font-family:'DM Mono',monospace">${fmtL(tL)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:10px 0 4px">
+            <span style="font-size:15px;font-weight:700">Net Worth</span>
+            <span style="font-size:16px;font-weight:700;color:var(--accent);font-family:'DM Mono',monospace">${fmtL(tA-tL)}</span>
+          </div>
         </div>`;
       }).join('')}
     </div>`;
 
-  // Combined SVG donut — same style as overview
+  // Combined SVG donut
   const combined = {};
   members.forEach(m => {
     const al = memberData[m.id]?.assets_liabilities || {};
@@ -2374,11 +2396,11 @@ function renderClientNetWorth() {
   });
 
   const ALLOC_DEF = [
-    {label:'Real estate', key:'real_estate',     color:'#3B82F6'},
+    {label:'Real Estate', key:'real_estate',     color:'#3B82F6'},
     {label:'Gold',        key:'gold',             color:'#F59E0B'},
-    {label:'Equity/MF',   key:'equity',           color:'#8B5CF6'},
-    {label:'Cash/Debt',   key:'debt_instruments', color:'#10B981'},
-    {label:'EPF/PPF',     key:'epf_ppf',          color:'#6366F1'},
+    {label:'Equity / MF', key:'equity',           color:'#8B5CF6'},
+    {label:'Cash / Debt', key:'debt_instruments', color:'#10B981'},
+    {label:'EPF / PPF',   key:'epf_ppf',          color:'#6366F1'},
     {label:'Vehicles',    key:'vehicles',         color:'#9CA3AF'},
     {label:'Other',       key:'other_assets',     color:'#F97316'},
   ];
@@ -2406,21 +2428,22 @@ function renderClientNetWorth() {
   }).join('');
 
   nwDonutEl.innerHTML = `
-    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:20px">
       <div style="flex-shrink:0">
         <svg width="140" height="140" viewBox="0 0 140 140">
-          <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--gray-100)" stroke-width="${strokeW}"/>
+          <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#F3F4F6" stroke-width="${strokeW}"/>
           ${segments}
-          <text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="11" fill="var(--text-muted)" font-family="inherit">Total</text>
-          <text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="12" fill="var(--text)" font-weight="600" font-family="inherit">${fmtL(tA)}</text>
+          <text x="${cx}" y="${cy-5}" text-anchor="middle" font-size="10" fill="#9CA3AF" font-family="${font}">Total</text>
+          <text x="${cx}" y="${cy+11}" text-anchor="middle" font-size="12" fill="#111827" font-weight="600" font-family="${font}">${fmtL(tA)}</text>
         </svg>
       </div>
-      <div style="flex:1;min-width:120px;max-width:220px;display:flex;flex-direction:column;gap:7px">
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px">
         ${active.map(a => `
-        <div style="display:flex;align-items:center;gap:7px">
+        <div style="display:flex;align-items:center;gap:8px">
           <div style="width:10px;height:10px;border-radius:2px;background:${a.color};flex-shrink:0"></div>
-          <div style="flex:1;font-size:12px;color:var(--text-muted);white-space:nowrap">${a.label}</div>
-          <div style="font-size:12px;font-weight:600;font-family:'DM Mono',monospace">${(combined[a.key]/tA*100).toFixed(1)}%</div>
+          <div style="flex:1;font-size:12px;color:#6B7280;font-family:${font}">${a.label}</div>
+          <div style="font-size:12px;font-weight:600;color:#111827;font-family:'DM Mono',monospace">${(combined[a.key]/tA*100).toFixed(1)}%</div>
+          <div style="font-size:11px;color:#9CA3AF;font-family:'DM Mono',monospace;width:62px;text-align:right">${fmtL(combined[a.key])}</div>
         </div>`).join('')}
       </div>
     </div>`;
