@@ -466,10 +466,29 @@ input,select,textarea{font-family:inherit;outline:none}
           <div class="stat-card"><div class="stat-label">Total EMI</div><div class="stat-value" id="cl-emi">—</div><div class="stat-sub">Monthly loan payments</div></div>
           <div class="stat-card"><div class="stat-label">Savings Rate</div><div class="stat-value" id="cl-savrate">—</div><div class="stat-sub">SIP + savings / income</div></div>
         </div>
+
+        <!-- Row 1: Asset Allocation Donut + Health Score + Risk Gauge -->
         <div class="grid-2" style="margin-bottom:18px">
-          <div class="card"><div class="card-title">Asset Allocation</div><div id="cl-alloc"></div></div>
-          <div class="card"><div class="card-title">Family Health Score</div><div id="cl-health"></div></div>
+          <div class="card">
+            <div class="card-title">Asset Allocation</div>
+            <div id="cl-alloc-donut" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Family Health Score</div>
+            <div id="cl-health"></div>
+            <div style="margin-top:14px;border-top:1px solid var(--gray-100);padding-top:12px">
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px">Risk Profile</div>
+              <div id="cl-risk-gauge"></div>
+            </div>
+          </div>
         </div>
+
+        <!-- Row 2: Income vs Expense Waterfall -->
+        <div class="card" style="margin-bottom:18px">
+          <div class="card-title">Income vs Expenses</div>
+          <div id="cl-waterfall"></div>
+        </div>
+
         <div class="card"><div class="card-title">Key Insights</div><div id="cl-insights"></div></div>
       </div>
 
@@ -2047,19 +2066,24 @@ function renderClientOverview() {
   const memberData = currentFamilyData.member_data || {};
 
   let tIncome=0, tExp=0, tAssets=0, tLiab=0, tSip=0, tEmi=0;
+  const expBreakdown = {};
+  const EXP_KEYS = ['emi','rent','sip','savings','household','transport','lifestyle','insurance_premium','other_expenses'];
+
   members.forEach(m => {
     const ie = memberData[m.id]?.income_expenses || {};
     const al = memberData[m.id]?.assets_liabilities || {};
-    tIncome  += ['primary_income','secondary_income','rental_income','other_income'].reduce((s,k)=>s+(ie[k]||0),0);
-    tExp     += ['emi','rent','sip','savings','household','transport','lifestyle','insurance_premium','other_expenses'].reduce((s,k)=>s+(ie[k]||0),0);
-    tAssets  += ['real_estate','gold','equity','debt_instruments','epf_ppf','cash','vehicles','other_assets'].reduce((s,k)=>s+(al[k]||0),0);
-    tLiab    += ['home_loan','car_loan','personal_loan','credit_card','other_loans'].reduce((s,k)=>s+(al[k]||0),0);
-    tSip     += (ie.sip||0)+(ie.savings||0);
-    tEmi     += (ie.emi||0);
+    tIncome += ['primary_income','secondary_income','rental_income','other_income'].reduce((s,k)=>s+(ie[k]||0),0);
+    tExp    += EXP_KEYS.reduce((s,k)=>s+(ie[k]||0),0);
+    tAssets += ['real_estate','gold','equity','debt_instruments','epf_ppf','cash','vehicles','other_assets'].reduce((s,k)=>s+(al[k]||0),0);
+    tLiab   += ['home_loan','car_loan','personal_loan','credit_card','other_loans'].reduce((s,k)=>s+(al[k]||0),0);
+    tSip    += (ie.sip||0)+(ie.savings||0);
+    tEmi    += (ie.emi||0);
+    EXP_KEYS.forEach(k => { expBreakdown[k] = (expBreakdown[k]||0)+(ie[k]||0); });
   });
 
-  const surplus  = tIncome - tExp;
-  const savRate  = tIncome ? ((tSip/tIncome)*100).toFixed(1) : 0;
+  const surplus = tIncome - tExp;
+  const savRate = tIncome ? ((tSip/tIncome)*100).toFixed(1) : 0;
+  const dti     = tIncome ? tEmi/tIncome : 0;
 
   document.getElementById('cl-networth').textContent = fmtL(tAssets-tLiab);
   document.getElementById('cl-surplus').textContent  = fmtL(surplus);
@@ -2067,41 +2091,70 @@ function renderClientOverview() {
   document.getElementById('cl-savrate').textContent  = savRate+'%';
   document.getElementById('cl-surplus').className    = 'stat-value '+(surplus>=0?'green':'red');
 
-  // Alloc bars
-  const alloc = [
-    {label:'Real estate',  key:'real_estate',     color:'#3B82F6'},
-    {label:'Gold',         key:'gold',             color:'#F59E0B'},
-    {label:'Cash + Debt',  key:'debt_cash',        color:'#10B981'},
-    {label:'Equity / MF',  key:'equity',           color:'#8B5CF6'},
-    {label:'EPF / PPF',    key:'epf_ppf',          color:'#6366F1'},
-    {label:'Vehicles',     key:'vehicles',         color:'#9CA3AF'},
+  // ── 1. ASSET ALLOCATION DONUT ──────────────────────────────────
+  const allocDef = [
+    {label:'Real estate', key:'real_estate',  color:'#3B82F6'},
+    {label:'Gold',        key:'gold',          color:'#F59E0B'},
+    {label:'Equity/MF',   key:'equity',        color:'#8B5CF6'},
+    {label:'Cash/Debt',   key:'debt_cash',     color:'#10B981'},
+    {label:'EPF/PPF',     key:'epf_ppf',       color:'#6366F1'},
+    {label:'Vehicles',    key:'vehicles',      color:'#9CA3AF'},
   ];
-  const totals = {};
+  const allocTotals = {};
   members.forEach(m => {
     const al = memberData[m.id]?.assets_liabilities || {};
-    alloc.forEach(a => {
-      if (a.key === 'debt_cash') totals[a.key] = (totals[a.key]||0)+(al.debt_instruments||0)+(al.cash||0);
-      else totals[a.key] = (totals[a.key]||0)+(al[a.key]||0);
+    allocDef.forEach(a => {
+      allocTotals[a.key] = (allocTotals[a.key]||0) +
+        (a.key === 'debt_cash' ? (al.debt_instruments||0)+(al.cash||0) : (al[a.key]||0));
     });
   });
 
-  const allocEl = document.getElementById('cl-alloc');
-  if (!tAssets) { allocEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No asset data yet.</p>'; }
-  else allocEl.innerHTML = alloc.filter(a=>totals[a.key]>0).map(a=>`
-    <div class="alloc-row">
-      <div class="alloc-label">${a.label}</div>
-      <div class="alloc-bar-wrap"><div class="alloc-bar-fill" style="width:${(totals[a.key]/tAssets*100).toFixed(1)}%;background:${a.color}"></div></div>
-      <div class="alloc-pct">${(totals[a.key]/tAssets*100).toFixed(1)}%</div>
-      <div class="alloc-amt">${fmtL(totals[a.key])}</div>
-    </div>`).join('');
+  const donutEl = document.getElementById('cl-alloc-donut');
+  if (!tAssets) {
+    donutEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No asset data yet.</p>';
+  } else {
+    const active = allocDef.filter(a => allocTotals[a.key] > 0);
+    // Build SVG donut
+    let cumPct = 0;
+    const r=54, cx=70, cy=70, strokeW=22;
+    const circ = 2*Math.PI*r;
+    const segments = active.map(a => {
+      const pct  = allocTotals[a.key] / tAssets;
+      const dash = pct * circ;
+      const gap  = circ - dash;
+      const rot  = cumPct * 360 - 90;
+      cumPct += pct;
+      return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${a.color}"
+        stroke-width="${strokeW}" stroke-dasharray="${dash} ${gap}"
+        transform="rotate(${rot} ${cx} ${cy})" stroke-linecap="butt"/>`;
+    }).join('');
 
-  // Health score
+    donutEl.innerHTML = `
+      <div style="flex-shrink:0">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--gray-100)" stroke-width="${strokeW}"/>
+          ${segments}
+          <text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="11" fill="var(--text-muted)" font-family="inherit">Total</text>
+          <text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="12" fill="var(--text)" font-weight="600" font-family="inherit">${fmtL(tAssets)}</text>
+        </svg>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+        ${active.map(a => `
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:10px;height:10px;border-radius:2px;background:${a.color};flex-shrink:0"></div>
+          <div style="flex:1;font-size:12px;color:var(--text-muted)">${a.label}</div>
+          <div style="font-size:12px;font-weight:600;font-family:'DM Mono',monospace">${(allocTotals[a.key]/tAssets*100).toFixed(1)}%</div>
+          <div style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;width:58px;text-align:right">${fmtL(allocTotals[a.key])}</div>
+        </div>`).join('')}
+      </div>`;
+  }
+
+  // ── 2. HEALTH SCORE ────────────────────────────────────────────
   let score = 5;
-  const dti = tIncome ? tEmi/tIncome : 0;
-  if (savRate >= 30) score += 2; else if (savRate >= 20) score += 1;
+  if (parseFloat(savRate) >= 30) score += 2; else if (parseFloat(savRate) >= 20) score += 1;
   if (dti < 0.3) score += 1; else if (dti > 0.5) score -= 1.5;
   if (surplus > 0) score += 0.5;
-  const totEquity = members.reduce((s,m)=>{const al=memberData[m.id]?.assets_liabilities||{}; return s+(al.equity||0);},0);
+  const totEquity = members.reduce((s,m)=>{const al=memberData[m.id]?.assets_liabilities||{};return s+(al.equity||0);},0);
   if (tAssets && totEquity/tAssets > 0.15) score += 0.5;
   score = Math.min(10, Math.max(1, Math.round(score*10)/10));
   const sc = score >= 7 ? '#10B981' : score >= 5 ? '#F59E0B' : '#EF4444';
@@ -2112,33 +2165,146 @@ function renderClientOverview() {
         <svg width="110" height="110" viewBox="0 0 110 110">
           <circle cx="55" cy="55" r="46" fill="none" stroke="#E5E7EB" stroke-width="9"/>
           <circle cx="55" cy="55" r="46" fill="none" stroke="${sc}" stroke-width="9"
-            stroke-dasharray="${(score/10)*289} 289" stroke-linecap="round"/>
+            stroke-dasharray="${(score/10)*289} 289" stroke-linecap="round"
+            transform="rotate(-90 55 55)"/>
         </svg>
         <div class="score-text">
           <div class="score-num" style="color:${sc}">${score.toFixed(1)}</div>
           <div class="score-lbl">/ 10</div>
         </div>
       </div>
-      <div style="font-size:13px;color:var(--text-muted);margin-top:8px">${score>=7?'Good shape':score>=5?'Needs attention':'Needs improvement'}</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:6px">${score>=7?'Good shape':score>=5?'Needs attention':'Needs improvement'}</div>
     </div>
-    <div style="margin-top:14px">
-      <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--text-muted)">Savings rate</span><span style="font-weight:600">${savRate}%</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--text-muted)">EMI / income</span><span style="font-weight:600">${(dti*100).toFixed(1)}%</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span style="color:var(--text-muted)">Debt / net worth</span><span style="font-weight:600">${tAssets?pct(tLiab,tAssets):'—'}</span></div>
+    <div style="margin-top:12px">
+      ${[['Savings rate',savRate+'%'],['EMI / income',(dti*100).toFixed(1)+'%'],['Debt / assets',tAssets?pct(tLiab,tAssets):'—']].map(([k,v])=>`
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--gray-100)">
+        <span style="color:var(--text-muted)">${k}</span><span style="font-weight:600">${v}</span>
+      </div>`).join('')}
     </div>`;
 
-  // Insights
-  const ins = [];
-  if (savRate >= 20) ins.push({t:'green',i:'✅',h:'Strong savings rate',b:`${savRate}% of income saved — above the 20% benchmark.`});
-  else ins.push({t:'amber',i:'⚠️',h:'Low savings rate',b:`${savRate}% saved. Aim for at least 20% of combined income.`});
-  if (dti > 0.4) ins.push({t:'red',i:'🔴',h:'High EMI burden',b:`EMI is ${(dti*100).toFixed(0)}% of income. Try to keep below 40%.`});
-  else if (tEmi > 0) ins.push({t:'green',i:'✅',h:'EMI well managed',b:`EMI is ${(dti*100).toFixed(0)}% of income — healthy.`});
-  if (tAssets && totEquity/tAssets < 0.10) ins.push({t:'amber',i:'📈',h:'Low equity allocation',b:`Only ${(totEquity/tAssets*100).toFixed(0)}% in equity. Consider increasing for long-term growth.`});
+  // ── 3. RISK PROFILE GAUGE ──────────────────────────────────────
+  const riskGaugeEl = document.getElementById('cl-risk-gauge');
+  const rp = currentFamilyData.member_data?.[auth.memberId]?.risk_profile;
+  if (!rp?.profile) {
+    riskGaugeEl.innerHTML = `<div style="font-size:12px;color:var(--text-muted)">Not assessed yet. Complete the Risk Profile assessment.</div>`;
+  } else {
+    const RISK_META = {
+      'conservative':{'label':'Conservative','color':'#047857'},
+      'moderately-conservative':{'label':'Mod. Conservative','color':'#4D7C0F'},
+      'moderate':{'label':'Moderate','color':'#B45309'},
+      'moderately-aggressive':{'label':'Mod. Aggressive','color':'#C2410C'},
+      'aggressive':{'label':'Aggressive','color':'#B91C1C'},
+      'very-aggressive':{'label':'Very Aggressive','color':'#7F1D1D'},
+    };
+    const GAUGE_ANGLES = {'conservative':195,'moderately-conservative':222,'moderate':249,'moderately-aggressive':276,'aggressive':303,'very-aggressive':330};
+    const SEG_COLORS   = ['#047857','#4D7C0F','#B45309','#C2410C','#B91C1C','#7F1D1D'];
+    const SEG_ANGLES   = [180,207,234,261,288,315,342];
+    const PROFILE_KEYS = ['conservative','moderately-conservative','moderate','moderately-aggressive','aggressive','very-aggressive'];
 
-  document.getElementById('cl-insights').innerHTML = ins.map(i=>`
-    <div class="insight ${i.t}"><div class="insight-icon">${i.i}</div>
-      <div class="insight-text"><strong>${i.h}</strong>${i.b}</div>
-    </div>`).join('') || '<p style="color:var(--text-muted);font-size:13px">Add financial data to see insights.</p>';
+    const meta  = RISK_META[rp.profile] || RISK_META.moderate;
+    const angle = GAUGE_ANGLES[rp.profile] || 249;
+    const toRad = d => d * Math.PI / 180;
+    const cx=100,cy=85,r=68,ri=52;
+
+    const segs = SEG_COLORS.map((c,i) => {
+      const a1=SEG_ANGLES[i], a2=SEG_ANGLES[i+1];
+      const o1x=cx+r*Math.cos(toRad(a1)), o1y=cy+r*Math.sin(toRad(a1));
+      const o2x=cx+r*Math.cos(toRad(a2)), o2y=cy+r*Math.sin(toRad(a2));
+      const i1x=cx+ri*Math.cos(toRad(a1)), i1y=cy+ri*Math.sin(toRad(a1));
+      const i2x=cx+ri*Math.cos(toRad(a2)), i2y=cy+ri*Math.sin(toRad(a2));
+      const active = PROFILE_KEYS[i] === rp.profile;
+      return `<path d="M ${i1x} ${i1y} A ${ri} ${ri} 0 0 1 ${i2x} ${i2y} L ${o2x} ${o2y} A ${r} ${r} 0 0 0 ${o1x} ${o1y} Z"
+        fill="${c}" opacity="${active?1:.25}" stroke="#fff" stroke-width="1"/>`;
+    }).join('');
+
+    const nx=cx+(r-8)*Math.cos(toRad(angle)), ny=cy+(r-8)*Math.sin(toRad(angle));
+
+    riskGaugeEl.innerHTML = `
+      <div style="text-align:center">
+        <svg viewBox="0 0 200 100" style="width:100%;max-width:220px">
+          ${segs}
+          <line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="#1E293B" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="${cx}" cy="${cy}" r="4.5" fill="#1E293B"/>
+          <circle cx="${cx}" cy="${cy}" r="2" fill="#fff"/>
+        </svg>
+        <div style="font-size:13px;font-weight:700;color:${meta.color};margin-top:4px">${meta.label}</div>
+        ${rp.valid_until ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">Valid until ${rp.valid_until}</div>` : ''}
+      </div>`;
+  }
+
+  // ── 4. INCOME vs EXPENSE WATERFALL ────────────────────────────
+  const waterfallEl = document.getElementById('cl-waterfall');
+  const EXP_LABELS  = {emi:'EMI',rent:'Rent',sip:'SIP/Invest',savings:'Savings',household:'Household',transport:'Transport',lifestyle:'Lifestyle',insurance_premium:'Insurance',other_expenses:'Other'};
+  const EXP_COLORS  = ['#EF4444','#F97316','#8B5CF6','#6366F1','#F59E0B','#10B981','#3B82F6','#14B8A6','#9CA3AF'];
+
+  if (!tIncome) {
+    waterfallEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No income/expense data yet.</p>';
+  } else {
+    const activeExp = EXP_KEYS.map((k,i) => ({
+      key:k, label:EXP_LABELS[k], val:expBreakdown[k]||0, color:EXP_COLORS[i]
+    })).filter(e => e.val > 0).sort((a,b) => b.val-a.val);
+
+    const maxVal   = tIncome;
+    const barH     = 28;
+    const gap      = 6;
+    const labelW   = 90;
+    const chartW   = 340;
+    const totalH   = (activeExp.length + 2) * (barH + gap) + 20; // +2 for income + surplus
+
+    // Build bars
+    let runningTotal = tIncome;
+    const rows = [];
+
+    // Income bar (full width, green)
+    rows.push({ label:'Income', val:tIncome, barW:chartW, x:0, color:'#10B981', bold:true });
+
+    // Expense bars — each starts from where the previous left off
+    activeExp.forEach(e => {
+      const barW = Math.round((e.val / maxVal) * chartW);
+      const x    = Math.round(((runningTotal - e.val) / maxVal) * chartW);
+      rows.push({ label:e.label, val:e.val, barW, x, color:e.color, bold:false });
+      runningTotal -= e.val;
+    });
+
+    // Surplus bar
+    const surplusW = Math.max(4, Math.round((Math.abs(surplus) / maxVal) * chartW));
+    const surplusX = surplus >= 0 ? Math.round((runningTotal / maxVal) * chartW) : 0;
+    rows.push({ label:'Surplus', val:surplus, barW:surplusW, x:surplusX, color:surplus>=0?'#3B82F6':'#EF4444', bold:true });
+
+    const svgH = rows.length * (barH + gap) + 10;
+    const svgBars = rows.map((row, i) => {
+      const y = i * (barH + gap) + 5;
+      return `
+        <text x="0" y="${y + barH/2 + 5}" font-size="11" fill="var(--text-muted)" font-family="inherit" font-weight="${row.bold?'600':'400'}">${row.label}</text>
+        <rect x="${labelW + row.x}" y="${y}" width="${Math.max(2,row.barW)}" height="${barH}" rx="3" fill="${row.color}" opacity="${row.bold?1:.8}"/>
+        <text x="${labelW + row.x + Math.max(2,row.barW) + 5}" y="${y + barH/2 + 5}" font-size="11" fill="var(--text)" font-family="inherit" font-weight="${row.bold?'600':'400'}">${fmtL(Math.abs(row.val))}</text>`;
+    }).join('');
+
+    waterfallEl.innerHTML = `
+      <div style="overflow-x:auto">
+        <svg viewBox="0 0 520 ${svgH}" style="width:100%;min-width:320px;font-size:12px" xmlns="http://www.w3.org/2000/svg">
+          ${svgBars}
+        </svg>
+      </div>`;
+  }
+
+  // ── INSIGHTS ───────────────────────────────────────────────────
+  const insights = [];
+  if (parseFloat(savRate) >= 20) insights.push({type:'green',icon:'✅',title:'Strong savings rate',body:`${savRate}% of income saved — above 20% benchmark.`});
+  else                            insights.push({type:'amber',icon:'⚠️',title:'Low savings rate',body:`${savRate}% saved. Aim for at least 20%.`});
+  if (dti > 0.4) insights.push({type:'red',icon:'🔴',title:'High EMI burden',body:`EMI is ${(dti*100).toFixed(0)}% of income. Recommended: below 40%.`});
+  else if (tEmi > 0) insights.push({type:'green',icon:'✅',title:'EMI well managed',body:`EMI is ${(dti*100).toFixed(0)}% of income — healthy.`});
+  if (surplus < 0) insights.push({type:'red',icon:'🔴',title:'Expenses exceed income',body:`Monthly deficit of ${fmtL(Math.abs(surplus))}. Review expense categories.`});
+
+  const insightBg = {green:'rgba(16,185,129,.08)',amber:'rgba(245,158,11,.08)',red:'rgba(239,68,68,.08)'};
+  document.getElementById('cl-insights').innerHTML = insights.map(ins=>`
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:12px;border-radius:9px;margin-bottom:8px;background:${insightBg[ins.type]}">
+      <span style="font-size:16px">${ins.icon}</span>
+      <div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:3px">${ins.title}</div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.5">${ins.body}</div>
+      </div>
+    </div>`).join('');
 }
 
 function renderClientNetWorth() {
