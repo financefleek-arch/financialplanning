@@ -2262,31 +2262,46 @@ function renderClientOverview() {
     let cumulative = 0;
     let remaining  = tIncome;
 
-    // Income — full green bar from left
-    rows.push({ label:'Income', val:tIncome, x:0, barW:chartW, color:'#10B981', bold:true, bg:false });
+    rows.push({ label:'Income', val:tIncome, x:0, barW:chartW, color:'#10B981', bold:true, fill:null });
 
-    // Each expense starts where previous ended, grows right — shows cumulative spend
     activeExp.forEach(e => {
       const barW = Math.max(3, Math.round((e.val / tIncome) * chartW));
-      rows.push({ label:e.label, val:e.val, x:cumulative, barW, color:e.color, bold:false, bg:true });
+      rows.push({ label:e.label, val:e.val, x:cumulative, barW, color:e.color, bold:false, fill:cumulative });
       cumulative += barW;
       remaining  -= e.val;
     });
 
-    // Surplus — remaining portion after all expenses
     const surplusW = Math.max(3, chartW - cumulative);
-    rows.push({ label:'Surplus', val:remaining, x:cumulative, barW:surplusW, color: remaining >= 0 ? '#3B82F6' : '#EF4444', bold:true, bg:false });
+    rows.push({ label:'Surplus', val:remaining, x:cumulative, barW:surplusW, color: remaining >= 0 ? '#3B82F6' : '#EF4444', bold:true, fill:cumulative });
 
     const svgH   = rows.length * (barH + gap) + 8;
+
+    // Build color segments for each row's "consumed so far" portion
     const svgBars = rows.map((row, i) => {
       const y = i * (barH + gap) + 4;
-      const bgEl = row.bg
-        ? `<rect x="${labelW}" y="${y}" width="${chartW}" height="${barH}" rx="3" fill="#F3F4F8"/>`
-        : '';
+
+      // For expense/surplus rows: render prior expense segments with 25% opacity
+      let priorSegs = '';
+      if (row.fill !== null && row.fill > 0) {
+        let pos = 0;
+        for (let j = 0; j < i - 1; j++) { // -1 to skip income row
+          const prev = rows[j + 1]; // offset by 1 (income is row 0)
+          if (!prev || prev === row) break;
+          const w = prev.barW;
+          priorSegs += `<rect x="${labelW + pos}" y="${y}" width="${w}" height="${barH}" rx="0" fill="${prev.color}" opacity="0.2"/>`;
+          pos += w;
+          if (pos >= row.fill) break;
+        }
+        // Round corners on the combined prior block
+        priorSegs = row.fill > 0
+          ? `<rect x="${labelW}" y="${y}" width="${row.fill}" height="${barH}" rx="3" fill="#E5E7EB"/>` + priorSegs
+          : '';
+      }
+
       return `
         <text x="${labelW - 6}" y="${y + barH/2 + 4}" font-size="11.5" fill="var(--text-muted)"
           text-anchor="end" font-family="inherit" font-weight="${row.bold?'600':'400'}">${row.label}</text>
-        ${bgEl}
+        ${priorSegs}
         <rect x="${labelW + row.x}" y="${y}" width="${row.barW}" height="${barH}" rx="3" fill="${row.color}"/>
         <text x="${labelW + row.x + row.barW + 5}" y="${y + barH/2 + 4}" font-size="11.5"
           fill="${row.bold?'var(--text)':'var(--text-muted)'}" font-family="inherit"
